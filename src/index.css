@@ -1,0 +1,65 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ink: #0E1111;
+  --color-warm-gray: #EDEAE6;
+  --color-off-white: #FCFCFC;
+  --color-accent: #2ECF8B;
+
+  --grid-tc-layout: [screen-start] minmax(1rem,151px) [page-start kicker-start middle-start text-start] repeat(8,minmax(0,45px)) [kicker-end text-end gutter-start] 45px [middle-end] 45px [page-end gutter-end] minmax(1rem,151px) [screen-end];
+  --grid-tc-mobile: [screen-start] 1rem [page-start text-start] 1fr [text-end page-end gutter-end] 1rem [screen-end];
+}
+
+@layer base {
+  body {
+    @apply font-sans text-ink bg-off-white;
+  }
+}
+
+@layer utilities {
+  /* Grid container with responsive columns */
+  .grid-tc {
+    display: grid;
+    grid-auto-rows: min-content;
+    grid-template-columns: var(--grid-tc-layout);
+  }
+
+  @media (max-width: 900px) {
+    .grid-tc {
+      grid-template-columns: var(--grid-tc-mobile);
+    }
+  }
+
+  /* Grid column utilities for Transformer Circuits layout */
+  .col-text {
+    grid-column: text-start / text-end;
+  }
+
+  .col-kicker {
+    grid-column: kicker-start / kicker-end;
+  }
+
+  .col-gutter {
+    grid-column: gutter-start / middle-end;
+  }
+
+  .col-page {
+    grid-column: page-start / page-end;
+  }
+
+  .col-fullbleed {
+    grid-column: screen-start / screen-end;
+  }
+
+  .col-middle {
+    grid-column: middle-start / middle-end;
+  }
+
+  /* Mobile: stack everything into page flow */
+  @media (max-width: 900px) {
+    .col-kicker,
+    .col-gutter {
+      grid-column: page-start / page-end;
+    }
+  }
+}

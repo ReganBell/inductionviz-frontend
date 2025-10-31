@@ -1,10 +1,5 @@
 import React, { useEffect, useRef } from "react";
-
-type HeatmapProps = {
-  matrix: number[][];
-  size?: number;
-  title?: string;
-};
+import type { HeatmapProps } from "./types";
 
 export function Heatmap({ matrix, size = 160, title }: HeatmapProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
