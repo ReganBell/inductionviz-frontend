@@ -156,11 +156,9 @@ function App() {
   return (
     <div className="grid-tc gap-y-5">
       {/* Header */}
-      <header className="col-page mb-4">
-        <h1 className="text-4xl font-semibold mb-1">Induction Heads 🎉</h1>
-        <p className="text-base mb-3">
-          The idea: build the tiniest imaginable transformer that can still do transformer-y stuff, and figure out why. What happens if you take out all the layers, all the transformer blocks?
-        </p>
+      <header className="col-page mb-6">
+        <h1 className="text-5xl md:text-6xl font-extrabold tracking-tight leading-tight mb-2">Induction Heads</h1>
+        <div className="text-sm opacity-70 mb-3">Demo inspired by Anthropic's Transformer Circuits framework</div>
         <div className="flex items-center gap-3">
           <div className="text-sm opacity-70 italic">Try your own text!</div>
           <button
@@ -172,8 +170,20 @@ function App() {
         </div>
       </header>
 
+      {/* Left Contents Sidebar (desktop) */}
+      <aside className="col-kicker sticky top-8 self-start hidden md:block">
+        <div className="text-xs uppercase tracking-wide opacity-60 mb-2">Contents</div>
+        <nav className="flex flex-col gap-2 text-sm">
+          <a className="opacity-90 hover:opacity-100 hover:underline" href="#input">Input</a>
+          <a className="opacity-90 hover:opacity-100 hover:underline" href="#tokens">Tokens</a>
+          <a className="opacity-90 hover:opacity-100 hover:underline" href="#architecture">Architecture</a>
+          <a className="opacity-90 hover:opacity-100 hover:underline" href="#ablation">Ablation</a>
+          <a className="opacity-90 hover:opacity-100 hover:underline" href="#topk">Top‑k</a>
+        </nav>
+      </aside>
+
       {showTextEditor && (
-        <form onSubmit={handleSubmit} className="col-text grid gap-3 mb-6 p-4 border border-black/10 rounded-lg bg-off-white">
+        <form id="input" onSubmit={handleSubmit} className="col-text grid gap-3 mb-6 p-4 border border-black/10 rounded-lg bg-off-white">
           <label className="flex flex-col gap-1.5">
             <span className="font-semibold">Text</span>
             <textarea
@@ -223,7 +233,7 @@ function App() {
       {analysis && (
         <>
           {/* Token Strip */}
-          <div className="col-text border border-black/10 rounded-lg p-4">
+          <div id="tokens" className="col-text border border-black/10 rounded-lg p-4">
             <TokenStrip
               tokens={analysis.tokens}
               active={lockedIdx != null ? lockedIdx : activeIdx}
@@ -298,7 +308,7 @@ function App() {
           )}
 
           {/* Architecture Selector */}
-          <div className="col-text">
+          <div id="architecture" className="col-text">
             <AttentionHeadSelector
               analysis={analysis}
               selectedModel={selectedModel}
@@ -314,7 +324,7 @@ function App() {
           </div>
 
           {/* Ablation Button */}
-          <div className="col-text">
+          <div id="ablation" className="col-text">
             <AblateHeadButton
               onClick={handleAblateHead}
               loading={ablationLoading}
@@ -338,7 +348,7 @@ function App() {
 
           {/* Top-k Panel */}
           {activePosition && (
-            <div className="col-text">
+            <div id="topk" className="col-text">
               <TopkPanel position={activePosition} />
             </div>
           )}
