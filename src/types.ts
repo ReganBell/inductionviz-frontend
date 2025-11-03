@@ -63,4 +63,19 @@ export type HeatmapProps = {
   title?: string;
 };
 
+export type AttentionPatternsRequest = {
+  text: string;
+  model_name: "t1" | "t2";
+  layers?: number[];
+  heads?: number[];
+};
+
+export type AttentionPatternsResponse = {
+  tokens: TokenInfo[];
+  attention: number[][][][];  // [position][layer][head][src_position]
+  model_name: string;
+  n_layers: number;
+  n_heads: number;
+};
+
 

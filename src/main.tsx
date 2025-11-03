@@ -9,8 +9,10 @@ import { HeadInfluencePanel } from "./components/HeadInfluencePanel";
 import { AblationPanel } from "./components/AblationPanel";
 import { AttentionHeadSelector } from "./components/AttentionHeadSelector";
 import { AblateHeadButton } from "./components/AblateHeadButton";
+import { AffinityMatrix } from "./components/AffinityMatrix";
+import { Explainer } from "./pages/Explainer";
 
-function App() {
+function Demo() {
   const [text, setText] = useState("^Mr and Mrs Dursley, of number four, Privet Drive, were proud to say that they were perfectly normal, thank you very much. They were the last people you'd expect to be involved in anything strange or mysterious, because they just didn't hold with such nonsense. Mr Dursley was the director of a firm called Grunnings, which made drills. He was a big, beefy man with hardly any neck, although he did have a very large moustache. Mrs Dursley was thin and blonde and had nearly twice the usual amount of neck, which came in very useful as she spent so much of her time craning over garden fences, spying on the neighbours. The Dursleys had a small son called Dudley and in their opinion there was no finer boy anywhere. The Dursleys had everything they wanted, but they also had a secret, and their greatest fear was that somebody would discover it. They didn't think they could bear it if anyone found out about the Potters. Mrs Potter was Mrs Dursley's sister, but they hadn't met for several years; in fact, Mrs Dursley pretended she didn't have a sister, because her sister and her good- for-nothing husband were as unDursleyish as it was possible to be. The Dursleys shuddered to think what the neighbours would say if the Potters arrived in the street. The Dursleys knew that the Potters had a small son, too, but they had never even seen him. This boy was another good reason for keeping the Potters away; they didn't want Dudley mixing with a child like that.");
   const [topK, setTopK] = useState(10);
   const [analysis, setAnalysis] = useState<AnalysisResponse | null>(null);
@@ -157,8 +159,8 @@ function App() {
     <div className="grid-tc gap-y-5">
       {/* Header */}
       <header className="col-page mb-6">
-        <h1 className="text-5xl md:text-6xl font-extrabold tracking-tight leading-tight mb-2">Induction Heads</h1>
-        <div className="text-sm opacity-70 mb-3">Demo inspired by Anthropic's Transformer Circuits framework</div>
+        <h1 className="text-xl md:text-6xl font-bold tracking-tight leading-tight mb-2">Induction Heads</h1>
+        <div>The idea: build the tiniest imaginable transformer that can still do transformer-y stuff, and figure out why. What happens if you take out all the layers, all the transformer blocks? </div>
         <div className="flex items-center gap-3">
           <div className="text-sm opacity-70 italic">Try your own text!</div>
           <button
@@ -281,6 +283,18 @@ function App() {
             </div>
           </div>
 
+          {/* Affinity Matrix - only show for small token counts */}
+          {analysis.tokens.length <= 15 && (
+            <div className="col-text">
+              <AffinityMatrix
+                analysis={analysis}
+                selectedModel={selectedModel}
+                selectedLayer={selectedLayer}
+                selectedHead={selectedHead}
+              />
+            </div>
+          )}
+
           {/* Context Info */}
           {activePosition ? (
             <>
@@ -366,6 +380,41 @@ function App() {
         </div>
       )}
 
+    </div>
+  );
+}
+
+function App() {
+  const [view, setView] = useState<"explainer" | "demo">("explainer");
+
+  return (
+    <div>
+      {/* Simple navigation bar */}
+      <div className="fixed top-4 right-4 z-50 flex gap-2">
+        <button
+          onClick={() => setView("explainer")}
+          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+            view === "explainer"
+              ? "bg-black text-white"
+              : "bg-white text-black border border-black/20 hover:bg-black/5"
+          }`}
+        >
+          Explainer
+        </button>
+        <button
+          onClick={() => setView("demo")}
+          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+            view === "demo"
+              ? "bg-black text-white"
+              : "bg-white text-black border border-black/20 hover:bg-black/5"
+          }`}
+        >
+          Demo
+        </button>
+      </div>
+
+      {/* Render selected view */}
+      {view === "explainer" ? <Explainer /> : <Demo />}
     </div>
   );
 }
