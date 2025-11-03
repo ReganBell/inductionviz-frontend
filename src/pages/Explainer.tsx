@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { BigramWidget } from "../components/BigramWidget";
 import { TokenStrip } from "../components/TokenStrip";
+import { AttentionCircuitWidget } from "../components/AttentionCircuitWidget";
 import { API_URL } from "../config";
 import type { AttentionPatternsResponse, TokenInfo } from "../types";
 
@@ -263,6 +264,8 @@ export function Explainer() {
           <p className="text-lg leading-relaxed mt-6">
             We can already do bigram modeling (the last token was X, so Y is probably...). With a <em>single</em> attention layer, we're still basically there, but we can mix in an extra token of evidence now. There are a lot of mental models for this, but here's what I'm using right now: we build up an <em>affinity matrix</em> (also called the QK circuit) that tells us how much token X cares about any other token. We learn this over time as the network trains. We also learn the OV circuit, which tells us, when we <em>do</em> attend to a token, how does that modulate our prediction for what comes next?
           </p>
+
+          <AttentionCircuitWidget />
 
           <figure className="my-12">
             <div className="rounded-2xl border border-neutral-200 bg-neutral-50/60 p-6 shadow-sm">
