@@ -6,39 +6,34 @@ import { API_URL } from "../config";
 // Fetches real predictions from OpenWebText bigram model
 // ------------------------------------------------------------
 
-async function fetchTopKBigram(
-  token: string,
+interface BigramBatchResponse {
+  tokens: Array<{ id: number; text: string }>;
+  predictions: Array<Array<{ token: string; prob: number }>>;
+}
+
+async function fetchBigramBatch(
+  text: string,
   k = 10
-): Promise<Array<{ token: string; prob: number }>> {
+): Promise<BigramBatchResponse | null> {
   try {
-    const response = await fetch(`${API_URL}/api/bigram-topk`, {
+    const response = await fetch(`${API_URL}/api/bigram-batch`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ token, k }),
+      body: JSON.stringify({ text, k }),
     });
 
     if (!response.ok) {
       const error = await response.json();
       console.error("API error:", error);
-      return [];
+      return null;
     }
 
-    const data = await response.json();
-
-    if (!data.available) {
-      console.warn(`Token "${token}" not found in bigram model`);
-      return [];
-    }
-
-    return data.predictions.map((p: any) => ({
-      token: p.token,
-      prob: p.prob,
-    }));
+    return await response.json();
   } catch (error) {
     console.error("Failed to fetch bigram data:", error);
-    return [];
+    return null;
   }
 }
 
@@ -49,10 +44,6 @@ function useDebounced<T>(value: T, delay = 200) {
     return () => clearTimeout(t);
   }, [value, delay]);
   return debounced;
-}
-
-function classNames(...xs: (string | false | null | undefined)[]) {
-  return xs.filter(Boolean).join(" ");
 }
 
 function SmallCaps({ children }: { children: React.ReactNode }) {
@@ -96,53 +87,60 @@ function Bar({ label, value, max, onClick }: { label: string; value: number; max
 }
 
 export function BigramWidget() {
-  const [token, setToken] = useState("is");
-  const [k, setK] = useState(10);
+  const [text, setText] = useState("My name is");
   const [loading, setLoading] = useState(false);
-  const [results, setResults] = useState<Array<{ token: string; prob: number }>>([]);
-  const [mode, setMode] = useState<"prob" | "logprob">("prob");
+  const [batchResults, setBatchResults] = useState<BigramBatchResponse | null>(null);
+  const [selectedTokenIdx, setSelectedTokenIdx] = useState<number>(0);
 
-  const debouncedToken = useDebounced(token, 220);
+  const debouncedText = useDebounced(text, 220);
 
   useEffect(() => {
     let mounted = true;
     (async () => {
+      if (!debouncedText.trim()) {
+        setBatchResults(null);
+        return;
+      }
       setLoading(true);
-      const data = await fetchTopKBigram(debouncedToken, k);
+      const data = await fetchBigramBatch(debouncedText, 10);
       if (mounted) {
-        setResults(data);
+        setBatchResults(data);
         setLoading(false);
+        // Select first token by default
+        if (data && data.tokens.length > 0) {
+          setSelectedTokenIdx(0);
+        }
       }
     })();
     return () => {
       mounted = false;
     };
-  }, [debouncedToken, k]);
+  }, [debouncedText]);
 
-  const display = useMemo(() => {
-    if (mode === "prob") return results;
-    // convert to logprob (base‑e) rescaled for bar lengths
-    const eps = 1e-12;
-    const logs = results.map((r) => ({ ...r, prob: Math.log(Math.max(eps, r.prob)) }));
-    const min = Math.min(...logs.map((x) => x.prob));
-    const shifted = logs.map((x) => ({ ...x, prob: x.prob - min + 1e-6 }));
-    return shifted;
-  }, [results, mode]);
+  const currentPredictions = useMemo(() => {
+    if (!batchResults || selectedTokenIdx >= batchResults.predictions.length) {
+      return [];
+    }
+    return batchResults.predictions[selectedTokenIdx];
+  }, [batchResults, selectedTokenIdx]);
 
-  const maxVal = useMemo(() => (display.length ? Math.max(...display.map((x) => x.prob)) : 1), [display]);
+  const maxVal = useMemo(() =>
+    currentPredictions.length ? Math.max(...currentPredictions.map((x) => x.prob)) : 1,
+    [currentPredictions]
+  );
 
-  const suggestions = useMemo(() => ["My", "name", "is", "Regan", ",", ".", "if", "else", "end", "only"], []);
+  const suggestions = useMemo(() => ["My name is", "The quick brown", "Hello world", "if else end"], []);
 
   return (
     <figure className="rounded-2xl border border-neutral-200 bg-neutral-50/60 p-5 shadow-sm">
-      {/* Token selection controls */}
+      {/* Text input */}
       <div>
-        <label className="mb-2 block text-sm text-neutral-600"><SmallCaps>Context Token</SmallCaps></label>
+        <label className="mb-2 block text-sm text-neutral-600"><SmallCaps>Input Text</SmallCaps></label>
         <div className="flex items-center gap-2">
           <input
-            value={token}
-            onChange={(e) => setToken(e.target.value)}
-            placeholder="e.g., is"
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            placeholder="e.g., My name is"
             className="w-full rounded-xl border border-neutral-300 bg-white px-3 py-2 font-mono text-sm shadow-inner outline-none focus:ring-2 focus:ring-neutral-800"
           />
         </div>
@@ -151,56 +149,68 @@ export function BigramWidget() {
           {suggestions.map((s) => (
             <button
               key={s}
-              onClick={() => setToken(s)}
+              onClick={() => setText(s)}
               className="rounded-full border border-neutral-300 bg-white/70 px-3 py-1 text-sm text-neutral-700 hover:bg-white focus:outline-none focus:ring-2 focus:ring-neutral-800"
             >
               {s}
             </button>
           ))}
         </div>
-
-        <div className="mt-6 flex gap-2">
-          {(["prob", "logprob"] as const).map((m) => (
-            <button
-              key={m}
-              onClick={() => setMode(m)}
-              className={classNames(
-                "rounded-xl border px-3 py-1.5 text-sm",
-                mode === m
-                  ? "border-neutral-900 bg-neutral-900 text-white"
-                  : "border-neutral-300 bg-white text-neutral-800 hover:bg-neutral-50"
-              )}
-            >
-              {m === "prob" ? "Probability" : "Log‑prob (scaled)"}
-            </button>
-          ))}
-        </div>
       </div>
+
+      {/* Token selector */}
+      {batchResults && batchResults.tokens.length > 0 && (
+        <div className="mt-6">
+          <label className="mb-2 block text-sm text-neutral-600">
+            <SmallCaps>Select Token</SmallCaps> (click to see its predictions)
+          </label>
+          <div className="flex flex-wrap gap-2">
+            {batchResults.tokens.map((tok, idx) => (
+              <button
+                key={idx}
+                onClick={() => setSelectedTokenIdx(idx)}
+                className={`rounded-lg border px-3 py-1.5 font-mono text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-neutral-800 ${
+                  selectedTokenIdx === idx
+                    ? "border-neutral-800 bg-neutral-800 text-white"
+                    : "border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-100"
+                }`}
+              >
+                {tok.text}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Next-token distribution */}
       <div className="mt-8">
         <div className="flex items-center justify-between">
-          <h3 className="font-serif text-2xl">Next‑token distribution</h3>
+          <h3 className="font-serif text-2xl">
+            Next‑token distribution
+            {batchResults && batchResults.tokens[selectedTokenIdx] && (
+              <span className="ml-2 font-mono text-lg text-neutral-500">
+                after "{batchResults.tokens[selectedTokenIdx].text}"
+              </span>
+            )}
+          </h3>
           {loading && (
             <span className="animate-pulse text-sm text-neutral-500">fetching…</span>
           )}
         </div>
 
         <div className="mt-3 rounded-xl border border-neutral-200 bg-white p-3">
-          {display.length === 0 ? (
+          {currentPredictions.length === 0 ? (
             <div className="py-10 text-center text-neutral-500">No results</div>
           ) : (
             <ul className="space-y-3">
-              {display.map((r, i) => (
+              {currentPredictions.map((r, i) => (
                 <li key={r.token + i}>
-                  <Bar label={r.token} value={r.prob} max={maxVal} onClick={() => setToken(r.token)} />
+                  <Bar label={r.token} value={r.prob} max={maxVal} />
                 </li>
               ))}
             </ul>
           )}
         </div>
-
-        <div className="mt-3 text-xs text-neutral-500">Click a row to use that token as the new context.</div>
       </div>
 
       <FigureCaption>

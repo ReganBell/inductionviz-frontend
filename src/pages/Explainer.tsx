@@ -1,5 +1,4 @@
 import React, { useState, useMemo, useEffect } from "react";
-import { BigramWidget } from "../components/BigramWidget";
 import { CombinedAttentionWidget } from "../components/CombinedAttentionWidget";
 import { TokenStrip } from "../components/TokenStrip";
 import { AttentionCircuitWidget } from "../components/AttentionCircuitWidget";
@@ -244,7 +243,10 @@ export function Explainer() {
 
                   {/* Bigram Widget */}
         <div className="my-12">
-          <BigramWidget />
+          <CombinedAttentionWidget
+            initialText="My name is"
+            panels={["batch"]}
+          />
         </div>
         <p className="text-lg leading-relaxed mt-6">
         Either way, what you've got is a learned bigram model, squeezed down into however much space you want. Bigram models are both bad and huge: the full transition matrix for the GPT-2 vocabulary takes up 10GB with 32-bit floats. Most transitions between tokens are never observed (I wonder how this holds over the full internet; eg it's kind of spooky that 15% of Google searches are novel) so the sparse version is 1000x smaller than that. So it's maybe not surprising but still kind of cool to see that we can learn a compressed representation that retains most of the "good" in around 1% of the storage.
@@ -266,7 +268,7 @@ export function Explainer() {
             With a <em>single</em> attention layer, we can now look at more than just the last token. Watch what happens when we compare bigram predictions (last token only) with attention-enhanced predictions (context-aware):
           </p>
 
-          <CombinedAttentionWidget />
+          <CombinedAttentionWidget panels={["hover", "batch"]} />
 
           <p className="text-lg leading-relaxed mt-6">
             How does this work? Under the hood, attention has two key components:
