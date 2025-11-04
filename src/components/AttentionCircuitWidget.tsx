@@ -9,8 +9,6 @@ interface Example {
   text: string;
   lockedTokenIdx: number;
   hoveredSourceTokenIdx: number;
-  affinityMatrix: number[][];
-  ovPredictions: Array<{ token: string; logit: number }>;
 }
 
 const EXAMPLES: Example[] = [
@@ -19,115 +17,23 @@ const EXAMPLES: Example[] = [
     description: "The \"Bracket-Closer\" Head (0:6)",
     text: "A model ( like this one ) works",
     lockedTokenIdx: 6, // )
-    hoveredSourceTokenIdx: 2, // (
-    affinityMatrix: [
-      [1.0, 0, 0, 0, 0, 0, 0, 0],
-      [0.15, 0.85, 0, 0, 0, 0, 0, 0],
-      [0.1, 0.1, 0.8, 0, 0, 0, 0, 0],
-      [0.05, 0.05, 0.4, 0.5, 0, 0, 0, 0],
-      [0.05, 0.05, 0.3, 0.3, 0.3, 0, 0, 0],
-      [0.05, 0.05, 0.25, 0.25, 0.2, 0.2, 0, 0],
-      [0.02, 0.02, 0.88, 0.02, 0.02, 0.02, 0.02, 0], // ) strongly attends to (
-      [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.3, 0.1],
-    ],
-    ovPredictions: [
-      { token: ",", logit: 2.1 },
-      { token: ".", logit: 1.9 },
-      { token: " and", logit: 1.7 },
-      { token: " that", logit: 1.5 },
-      { token: " which", logit: 1.3 },
-    ],
+    hoveredSourceTokenIdx: 2 // (
   },
   {
     name: "Abstract Topic",
     description: "The \"Philosophy Cluster\" Head (0:0)",
     text: "The philosopher argues that sense determines truth",
     lockedTokenIdx: 5, // "sense"
-    hoveredSourceTokenIdx: 2, // "argues"
-    affinityMatrix: [
-      [1.0, 0, 0, 0, 0, 0, 0, 0],
-      [0.2, 0.8, 0, 0, 0, 0, 0, 0],
-      [0.15, 0.15, 0.7, 0, 0, 0, 0, 0],
-      [0.1, 0.1, 0.3, 0.5, 0, 0, 0, 0],
-      [0.1, 0.1, 0.25, 0.25, 0.3, 0, 0, 0],
-      [0.05, 0.05, 0.55, 0.1, 0.1, 0.15, 0, 0], // "sense" attends to "argues"
-      [0.05, 0.05, 0.3, 0.15, 0.2, 0.15, 0.1, 0],
-      [0.05, 0.05, 0.2, 0.15, 0.15, 0.2, 0.1, 0.1],
-    ],
-    ovPredictions: [
-      { token: " phenomenological", logit: 2.27 },
-      { token: " causation", logit: 2.22 },
-      { token: " epistem", logit: 2.09 },
-      { token: " Heidegger", logit: 2.06 },
-      { token: " Nietzsche", logit: 1.93 },
-    ],
+    hoveredSourceTokenIdx: 2
   },
   {
     name: "Semantic Fact",
-    description: "The \"Name→Title\" Head (0:2)",
-    text: "The email was from Chris our new director",
+    description: "The \"Name→Title\" Head (0:1)",
+    text: "The email was from Michael our new director",
     lockedTokenIdx: 8, // "director"
-    hoveredSourceTokenIdx: 4, // "Chris"
-    affinityMatrix: [
-      [1.0, 0, 0, 0, 0, 0, 0, 0, 0],
-      [0.2, 0.8, 0, 0, 0, 0, 0, 0, 0],
-      [0.15, 0.15, 0.7, 0, 0, 0, 0, 0, 0],
-      [0.1, 0.1, 0.25, 0.55, 0, 0, 0, 0, 0],
-      [0.1, 0.1, 0.2, 0.2, 0.4, 0, 0, 0, 0],
-      [0.1, 0.1, 0.2, 0.15, 0.25, 0.2, 0, 0, 0],
-      [0.08, 0.08, 0.15, 0.15, 0.2, 0.18, 0.16, 0, 0],
-      [0.08, 0.08, 0.14, 0.14, 0.18, 0.16, 0.14, 0.08, 0],
-      [0.05, 0.05, 0.1, 0.1, 0.6, 0.05, 0.03, 0.02, 0], // "director" attends to "Chris"
-    ],
-    ovPredictions: [
-      { token: " Manager", logit: 2.47 },
-      { token: " Director", logit: 2.46 },
-      { token: " director", logit: 2.35 },
-      { token: " CEO", logit: 2.23 },
-      { token: " associate", logit: 2.33 },
-    ],
+    hoveredSourceTokenIdx: 4
   },
 ];
-
-// Generate fake data for demonstration
-function generateFakeAffinityMatrix(tokens: string[]): number[][] {
-  const n = tokens.length;
-  const matrix: number[][] = [];
-
-  for (let i = 0; i < n; i++) {
-    matrix[i] = [];
-    for (let j = 0; j < n; j++) {
-      // Create some patterns: diagonal + some random affinity
-      if (i === j) {
-        matrix[i][j] = 0.1 + Math.random() * 0.2;
-      } else if (j < i) {
-        // Can only attend to previous tokens
-        matrix[i][j] = Math.random() * 0.8;
-      } else {
-        // Future tokens get zero (causal mask)
-        matrix[i][j] = 0;
-      }
-    }
-
-    // Normalize row to sum to 1 (softmax-like)
-    const sum = matrix[i].reduce((a, b) => a + b, 0);
-    if (sum > 0) {
-      for (let j = 0; j < n; j++) {
-        matrix[i][j] /= sum;
-      }
-    }
-  }
-
-  return matrix;
-}
-
-function generateFakeOVLogits(token: string): Array<{ token: string; logit: number }> {
-  const commonWords = ["the", "a", "is", "was", "and", "of", "to", "in", "that", "for"];
-  return commonWords
-    .map(word => ({ token: word, logit: Math.random() * 5 - 1 }))
-    .sort((a, b) => b.logit - a.logit)
-    .slice(0, 5);
-}
 
 export function AttentionCircuitWidget() {
   const [activeTab, setActiveTab] = useState(0);
@@ -156,7 +62,7 @@ export function AttentionCircuitWidget() {
             text: text,
             model_name: "t1",
             layers: [0],
-            heads: [0, 2, 6],
+            heads: [0, 1, 6],  // Tab 0: head 6 (Syntax), Tab 1: head 0 (Abstract), Tab 2: head 1 (Semantic Fact)
           }),
         });
 
@@ -193,12 +99,19 @@ export function AttentionCircuitWidget() {
       matrix[0][0] = 1;
 
       // For each subsequent position, get attention pattern
+      // Map tab to head index in the request [0, 1, 6]
+      // Tab 0 (Syntax): head 6 -> index 2
+      // Tab 1 (Abstract Topic): head 0 -> index 0
+      // Tab 2 (Semantic Fact): head 1 -> index 1
+      const headIndexMap = [2, 0, 1]; // Maps activeTab to head index in request
+      const headIndex = headIndexMap[activeTab];
+
       for (let i = 0; i < realAttention.length && i < tokens.length - 1; i++) {
         const positionIdx = i; // position in realAttention
         const tokenIdx = i + 1; // token index (offset by 1)
 
-        // Get attention for first head (we'll need to make head selection work later)
-        const headAttention = realAttention[positionIdx][0][0]; // [position][layer][head][src_positions]
+        // Get attention for the correct head based on active tab
+        const headAttention = realAttention[positionIdx][0][headIndex]; // [position][layer][head][src_positions]
 
         // Pad to full length
         const row = Array(tokens.length).fill(0);
@@ -210,12 +123,7 @@ export function AttentionCircuitWidget() {
 
       return matrix;
     }
-
-    // Fall back to example or generated data
-    return text === currentExample.text
-      ? currentExample.affinityMatrix
-      : generateFakeAffinityMatrix(tokens);
-  }, [realAttention, tokens, text, currentExample]);
+  }, [realAttention, tokens, text, currentExample, activeTab]);
 
   // OV circuit shows predictions for the hovered source token
   const ovLogits = useMemo(() => {
@@ -224,20 +132,17 @@ export function AttentionCircuitWidget() {
     // Try to use real OV predictions first
     if (realOVPredictions && hoveredSourceToken < realOVPredictions.length) {
       const tokenPredictions = realOVPredictions[hoveredSourceToken];
-      // Use layer 0, head 0 (first head in the request)
-      if (tokenPredictions && tokenPredictions[0] && tokenPredictions[0][0]) {
-        return tokenPredictions[0][0];
+      // Map tab to head index in the request [0, 1, 6]
+      // Tab 0 (Syntax): head 6 -> index 2
+      // Tab 1 (Abstract Topic): head 0 -> index 0
+      // Tab 2 (Semantic Fact): head 1 -> index 1
+      const headIndexMap = [2, 0, 1]; // Maps activeTab to head index in request
+      const headIndex = headIndexMap[activeTab];
+      if (tokenPredictions && tokenPredictions[0] && tokenPredictions[0][headIndex]) {
+        return tokenPredictions[0][headIndex];
       }
     }
-
-    // Fall back to example data if text matches
-    if (text === currentExample.text) {
-      return currentExample.ovPredictions;
-    }
-
-    // Otherwise generate fake data
-    return generateFakeOVLogits(tokens[hoveredSourceToken]);
-  }, [hoveredSourceToken, realOVPredictions, text, currentExample, tokens]);
+  }, [hoveredSourceToken, realOVPredictions, text, currentExample, tokens, activeTab]);
 
   // Convert tokens to format expected by TokenStrip
   const tokenStripData = tokens.map((text, i) => ({ text, id: i }));
