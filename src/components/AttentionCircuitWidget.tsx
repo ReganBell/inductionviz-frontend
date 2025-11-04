@@ -28,7 +28,7 @@ const EXAMPLES: Example[] = [
   },
   {
     name: "Semantic Fact",
-    description: "The \"Name→Title\" Head (0:1)",
+    description: "The \"Name→Title\" Head (0:2)",
     text: "The email was from Michael our new director",
     lockedTokenIdx: 8, // "director"
     hoveredSourceTokenIdx: 4
@@ -62,7 +62,7 @@ export function AttentionCircuitWidget() {
             text: text,
             model_name: "t1",
             layers: [0],
-            heads: [0, 1, 6],  // Tab 0: head 6 (Syntax), Tab 1: head 0 (Abstract), Tab 2: head 1 (Semantic Fact)
+            heads: [0, 2, 6],  // Tab 0: head 6 (Syntax), Tab 1: head 0 (Abstract), Tab 2: head 2 (Semantic Fact)
           }),
         });
 
@@ -99,10 +99,10 @@ export function AttentionCircuitWidget() {
       matrix[0][0] = 1;
 
       // For each subsequent position, get attention pattern
-      // Map tab to head index in the request [0, 1, 6]
+      // Map tab to head index in the request [0, 2, 6]
       // Tab 0 (Syntax): head 6 -> index 2
       // Tab 1 (Abstract Topic): head 0 -> index 0
-      // Tab 2 (Semantic Fact): head 1 -> index 1
+      // Tab 2 (Semantic Fact): head 2 -> index 1
       const headIndexMap = [2, 0, 1]; // Maps activeTab to head index in request
       const headIndex = headIndexMap[activeTab];
 
@@ -137,10 +137,10 @@ export function AttentionCircuitWidget() {
     // Use real OV predictions only
     if (realOVPredictions && hoveredSourceToken < realOVPredictions.length) {
       const tokenPredictions = realOVPredictions[hoveredSourceToken];
-      // Map tab to head index in the request [0, 1, 6]
+      // Map tab to head index in the request [0, 2, 6]
       // Tab 0 (Syntax): head 6 -> index 2
       // Tab 1 (Abstract Topic): head 0 -> index 0
-      // Tab 2 (Semantic Fact): head 1 -> index 1
+      // Tab 2 (Semantic Fact): head 2 -> index 1
       const headIndexMap = [2, 0, 1]; // Maps activeTab to head index in request
       const headIndex = headIndexMap[activeTab];
       if (tokenPredictions && tokenPredictions[0] && tokenPredictions[0][headIndex]) {
