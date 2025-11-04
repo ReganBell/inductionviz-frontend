@@ -355,11 +355,17 @@ export function AttentionCircuitWidget() {
               </table>
             </div>
             <p className="text-xs text-gray-500 mt-3">
-              {hoveredToken !== null && hoveredSourceToken !== null && hoveredToken < tokens.length && hoveredSourceToken < tokens.length
-                ? `Assign ${(affinityMatrix[hoveredToken][hoveredSourceToken] * 100).toFixed(0)}% attention to "${tokens[hoveredSourceToken]}" to guess the token after "${tokens[hoveredToken]}"`
-                : hoveredToken !== null && hoveredToken < tokens.length
-                ? `Cols: what should we attend to guess the token after "${tokens[hoveredToken]}"?`
-                : "Rows: current token. Cols: which tokens to attend to?"}
+              {hoveredToken !== null && hoveredSourceToken !== null && hoveredToken < tokens.length && hoveredSourceToken < tokens.length ? (
+                <>
+                  Assign {(affinityMatrix[hoveredToken][hoveredSourceToken] * 100).toFixed(0)}% attention to <code className="bg-gray-100 px-1 rounded">{tokens[hoveredSourceToken]}</code> to guess the token after <code className="bg-gray-100 px-1 rounded">{tokens[hoveredToken]}</code>
+                </>
+              ) : hoveredToken !== null && hoveredToken < tokens.length ? (
+                <>
+                  Cols: what should we attend to guess the token after <code className="bg-gray-100 px-1 rounded">{tokens[hoveredToken]}</code>?
+                </>
+              ) : (
+                "Rows: current token. Cols: which tokens to attend to?"
+              )}
             </p>
           </div>
         </div>
