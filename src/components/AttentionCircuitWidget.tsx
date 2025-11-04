@@ -1,5 +1,7 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { TokenStrip } from "./TokenStrip";
+import { API_URL } from "../config";
+import type { AttentionPatternsResponse } from "../types";
 
 interface Example {
   name: string;
@@ -134,19 +136,108 @@ export function AttentionCircuitWidget() {
   const [lockedToken, setLockedToken] = useState<number | null>(EXAMPLES[0].lockedTokenIdx);
   const [hoveredSourceToken, setHoveredSourceToken] = useState<number | null>(EXAMPLES[0].hoveredSourceTokenIdx);
 
+  // Real API data
+  const [realTokens, setRealTokens] = useState<Array<{ text: string; id: number }> | null>(null);
+  const [realAttention, setRealAttention] = useState<number[][][][] | null>(null);
+  const [realOVPredictions, setRealOVPredictions] = useState<any[] | null>(null);
+
   const currentExample = EXAMPLES[activeTab];
-  const allTokens = text.split(/\s+/).filter(t => t.length > 0);
+
+  // Fetch real attention patterns from API
+  useEffect(() => {
+    const fetchAttention = async () => {
+      if (!text.trim()) return;
+
+      try {
+        const response = await fetch(`${API_URL}/api/attention-patterns`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            text: text,
+            model_name: "t1",
+            layers: [0],
+            heads: [0, 2, 6],
+          }),
+        });
+
+        if (!response.ok) throw new Error("Failed to fetch attention");
+
+        const data: AttentionPatternsResponse = await response.json();
+        setRealTokens(data.tokens);
+        setRealAttention(data.attention);
+        setRealOVPredictions(data.ov_predictions || null);
+      } catch (err) {
+        console.error("Error fetching attention:", err);
+        setRealTokens(null);
+        setRealAttention(null);
+        setRealOVPredictions(null);
+      }
+    };
+
+    const timer = setTimeout(fetchAttention, 300);
+    return () => clearTimeout(timer);
+  }, [text]);
+
+  // Use real tokens if available, otherwise split text
+  const allTokens = realTokens ? realTokens.map(t => t.text) : text.split(/\s+/).filter(t => t.length > 0);
   const tokens = allTokens.slice(0, 10); // Only use first 10 tokens
 
-  // Use example data if text matches the example, otherwise generate fake data
-  const affinityMatrix = text === currentExample.text
-    ? currentExample.affinityMatrix
-    : generateFakeAffinityMatrix(tokens);
+  // Build affinity matrix from real attention or example data
+  const affinityMatrix = useMemo(() => {
+    // If we have real attention data, convert it to a matrix
+    if (realAttention && realAttention.length > 0) {
+      const matrix: number[][] = [];
+
+      // First row is always [1, 0, 0, ...] (first token attends to itself)
+      matrix[0] = Array(tokens.length).fill(0);
+      matrix[0][0] = 1;
+
+      // For each subsequent position, get attention pattern
+      for (let i = 0; i < realAttention.length && i < tokens.length - 1; i++) {
+        const positionIdx = i; // position in realAttention
+        const tokenIdx = i + 1; // token index (offset by 1)
+
+        // Get attention for first head (we'll need to make head selection work later)
+        const headAttention = realAttention[positionIdx][0][0]; // [position][layer][head][src_positions]
+
+        // Pad to full length
+        const row = Array(tokens.length).fill(0);
+        for (let j = 0; j < headAttention.length && j <= tokenIdx; j++) {
+          row[j] = headAttention[j];
+        }
+        matrix[tokenIdx] = row;
+      }
+
+      return matrix;
+    }
+
+    // Fall back to example or generated data
+    return text === currentExample.text
+      ? currentExample.affinityMatrix
+      : generateFakeAffinityMatrix(tokens);
+  }, [realAttention, tokens, text, currentExample]);
 
   // OV circuit shows predictions for the hovered source token
-  const ovLogits = text === currentExample.text && hoveredSourceToken !== null
-    ? currentExample.ovPredictions
-    : (hoveredSourceToken !== null ? generateFakeOVLogits(tokens[hoveredSourceToken]) : null);
+  const ovLogits = useMemo(() => {
+    if (hoveredSourceToken === null) return null;
+
+    // Try to use real OV predictions first
+    if (realOVPredictions && hoveredSourceToken < realOVPredictions.length) {
+      const tokenPredictions = realOVPredictions[hoveredSourceToken];
+      // Use layer 0, head 0 (first head in the request)
+      if (tokenPredictions && tokenPredictions[0] && tokenPredictions[0][0]) {
+        return tokenPredictions[0][0];
+      }
+    }
+
+    // Fall back to example data if text matches
+    if (text === currentExample.text) {
+      return currentExample.ovPredictions;
+    }
+
+    // Otherwise generate fake data
+    return generateFakeOVLogits(tokens[hoveredSourceToken]);
+  }, [hoveredSourceToken, realOVPredictions, text, currentExample, tokens]);
 
   // Convert tokens to format expected by TokenStrip
   const tokenStripData = tokens.map((text, i) => ({ text, id: i }));

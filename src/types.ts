@@ -70,9 +70,16 @@ export type AttentionPatternsRequest = {
   heads?: number[];
 };
 
+export type OVPrediction = {
+  token: string;
+  id: number;
+  logit: number;
+};
+
 export type AttentionPatternsResponse = {
   tokens: TokenInfo[];
   attention: number[][][][];  // [position][layer][head][src_position]
+  ov_predictions?: OVPrediction[][][][];  // [token][layer][head][prediction]
   model_name: string;
   n_layers: number;
   n_heads: number;
