@@ -13,6 +13,7 @@ export function TokenStrip({
   selectedLayer,
   selectedHead,
   highlightMode,
+  disableFirstToken = true,
 }: {
   tokens: TokenInfo[];
   active: number | null;
@@ -26,6 +27,7 @@ export function TokenStrip({
   selectedLayer: number;
   selectedHead: number;
   highlightMode: "attention" | "value-weighted" | "delta";
+  disableFirstToken?: boolean;
 }) {
   // Calculate attention scores for each token using selected head
   const getTokenAttentionScore = (tokenIdx: number): number => {
@@ -92,7 +94,7 @@ export function TokenStrip({
   return (
     <div style={{ lineHeight: 1.8, wordBreak: "break-word", userSelect: "none" }}>
       {tokens.map((tok, idx) => {
-        const disabled = idx === 0;
+        const disabled = disableFirstToken && idx === 0;
         const isLocked = locked === idx;
         const isActive = active === idx;
         const score = getTokenScore(idx, tok.id);

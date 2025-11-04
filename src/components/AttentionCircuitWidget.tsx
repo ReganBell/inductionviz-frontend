@@ -197,7 +197,7 @@ export function AttentionCircuitWidget() {
     if (lockedToken !== null) {
       // When locked, keep the locked token as hovered and set source token
       setHoveredToken(lockedToken);
-      if (idx !== null && idx < lockedToken) {
+      if (idx !== null && idx <= lockedToken) {
         setHoveredSourceToken(idx);
       } else {
         setHoveredSourceToken(null);
@@ -285,6 +285,7 @@ export function AttentionCircuitWidget() {
           selectedLayer={0}
           selectedHead={0}
           highlightMode="attention"
+          disableFirstToken={false}
         />
         <p className="text-xs text-gray-500 mt-2">
           Click a token to lock, then hover previous tokens to see OV contributions
