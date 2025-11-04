@@ -1,5 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { TokenStrip } from "./TokenStrip";
+import { QKCircuitWidget } from "./QKCircuitWidget";
+import { OVCircuitWidget } from "./OVCircuitWidget";
 import { API_URL } from "../config";
 import type { AttentionPatternsResponse } from "../types";
 
@@ -227,15 +229,6 @@ export function AttentionCircuitWidget() {
     setHoveredSourceToken(null);
   };
 
-  // Color scale from gray (0) to dark red-orange
-  const getColor = (value: number) => {
-    if (value === 0) {
-      return '#e5e7eb'; // gray-200 for zero/empty values
-    }
-    const intensity = Math.floor(value * 255);
-    return `rgb(${255}, ${140 - intensity * 0.4}, ${100 - intensity * 0.3})`;
-  };
-
   return (
     <div className="my-12 -mx-[25%] p-8 bg-gray-50 rounded-lg border border-gray-200">
       {/* Tabs */}
@@ -304,134 +297,23 @@ export function AttentionCircuitWidget() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
         {/* Left: QK Circuit (Affinity Matrix) */}
-        <div>
-          <h4 className="text-sm font-semibold text-gray-700 mb-3 text-center">
-            QK Circuit (Affinity Matrix)
-          </h4>
-          <div className="p-4">
-            <div className="flex justify-center">
-              <table className="border-collapse">
-                <thead>
-                  <tr>
-                    <th className="w-10"></th>
-                    {tokens.map((token, i) => (
-                      <th key={i} className="text-[10px] p-0.5 text-gray-600 font-normal">
-                        <div className="w-8 truncate text-center">{token}</div>
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {tokens.map((rowToken, i) => {
-                    const isRowHighlighted = hoveredToken === i;
-                    const shouldDim = hoveredToken !== null && hoveredToken !== i;
-
-                    return (
-                      <tr key={i} className={shouldDim ? "opacity-30" : "opacity-100 transition-opacity"}>
-                        <td className="text-[10px] p-0.5 text-gray-600 font-medium">
-                          <div className="w-10 truncate text-right pr-1">{rowToken}</div>
-                        </td>
-                        {tokens.map((_, j) => {
-                          const isColHighlighted = hoveredSourceToken === j;
-                          const isCellHighlighted = isRowHighlighted && isColHighlighted;
-
-                          return (
-                            <td key={j} className="p-0">
-                              <div
-                                className={`w-8 h-8 border flex items-center justify-center text-[9px] font-mono cursor-pointer transition-all ${
-                                  isCellHighlighted
-                                    ? "border-blue-500 border-2 ring-2 ring-blue-200"
-                                    : isRowHighlighted || isColHighlighted
-                                    ? "border-gray-300"
-                                    : "border-gray-100"
-                                }`}
-                                style={{ backgroundColor: getColor(affinityMatrix[i][j]) }}
-                                onMouseEnter={() => handleMatrixCellHover(i, j)}
-                                onMouseLeave={handleMatrixCellLeave}
-                              >
-                                {affinityMatrix[i][j] > 0.15 && (
-                                  <span className="text-white drop-shadow">
-                                    {(affinityMatrix[i][j] * 100).toFixed(0)}
-                                  </span>
-                                )}
-                              </div>
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-            <p className="text-xs text-gray-500 mt-3">
-              {hoveredToken !== null && hoveredSourceToken !== null && hoveredToken < tokens.length && hoveredSourceToken < tokens.length ? (
-                <>
-                  Assign {(affinityMatrix[hoveredToken][hoveredSourceToken] * 100).toFixed(0)}% attention to <code className="bg-gray-100 px-1 rounded">{tokens[hoveredSourceToken]}</code> to guess the token after <code className="bg-gray-100 px-1 rounded">{tokens[hoveredToken]}</code>
-                </>
-              ) : hoveredToken !== null && hoveredToken < tokens.length ? (
-                <>
-                  Cols: what should we attend to guess the token after <code className="bg-gray-100 px-1 rounded">{tokens[hoveredToken]}</code>?
-                </>
-              ) : (
-                "Rows: current token. Cols: which tokens to attend to?"
-              )}
-            </p>
-          </div>
-        </div>
+        <QKCircuitWidget
+          tokens={tokens}
+          affinityMatrix={affinityMatrix}
+          hoveredToken={hoveredToken}
+          hoveredSourceToken={hoveredSourceToken}
+          onMatrixCellHover={handleMatrixCellHover}
+          onMatrixCellLeave={handleMatrixCellLeave}
+        />
 
         {/* Right: OV Circuit */}
-        <div>
-          <h4 className="text-sm font-semibold text-gray-700 mb-3 text-center">
-            OV Circuit (Value Contributions)
-          </h4>
-          <div className="p-4 min-h-[300px] flex flex-col justify-center">
-            {/* Top-k logits display */}
-            {ovLogits && hoveredSourceToken !== null && hoveredToken !== null ? (
-              <div>
-                <p className="text-xs font-medium text-gray-700 mb-3 text-center">
-                  Most-boosted predictions when attending to <code className="bg-neutral-800 text-white px-1 rounded text-[13px] font-mono">{tokens[hoveredSourceToken]}</code>:
-                </p>
-                <div className="space-y-1">
-                  {(() => {
-                    // Calculate max logit for scaling (0 is always the minimum)
-                    const maxLogit = Math.max(...ovLogits.map(item => item.logit));
-
-                    return ovLogits.map((item, i) => {
-                      // Scale from 0 to max to avoid misleading visualization
-                      const width = maxLogit > 0 ? (item.logit / maxLogit) * 100 : 0;
-
-                      return (
-                        <div key={i} className="flex items-center gap-3 py-0.5">
-                          <div className="w-20 shrink-0 font-mono text-sm text-neutral-800">
-                            {item.token}
-                          </div>
-                          <div className="flex-1 max-w-md">
-                            <div className="h-2 rounded-sm bg-neutral-100">
-                              <div
-                                className="h-2 rounded-sm bg-neutral-300 transition-all duration-300"
-                                style={{ width: `${width}%` }}
-                              />
-                            </div>
-                          </div>
-                          <div className="w-16 shrink-0 font-mono text-xs tabular-nums text-neutral-500">
-                            {item.logit.toFixed(2)}
-                          </div>
-                        </div>
-                      );
-                    });
-                  })()}
-                </div>
-              </div>
-            ) : (
-              <div className="flex items-center justify-center h-48 text-gray-400 text-sm text-center px-4">
-                {lockedToken !== null
-                  ? "Hover over previous tokens to see OV contributions"
-                  : "Click a token in the strip above, then hover previous tokens"}
-              </div>
-            )}
-          </div>
-        </div>
+        <OVCircuitWidget
+          tokens={tokens}
+          ovLogits={ovLogits}
+          hoveredSourceToken={hoveredSourceToken}
+          hoveredToken={hoveredToken}
+          lockedToken={lockedToken}
+        />
       </div>
     </div>
   );

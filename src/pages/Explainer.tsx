@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { BigramWidget } from "../components/BigramWidget";
+import { CombinedAttentionWidget } from "../components/CombinedAttentionWidget";
 import { TokenStrip } from "../components/TokenStrip";
 import { AttentionCircuitWidget } from "../components/AttentionCircuitWidget";
 import { API_URL } from "../config";
@@ -262,7 +263,25 @@ export function Explainer() {
           </p>
 
           <p className="text-lg leading-relaxed mt-6">
-            We can already do bigram modeling (the last token was X, so Y is probably...). With a <em>single</em> attention layer, we're still basically there, but we can mix in an extra token of evidence now. There are a lot of mental models for this, but here's what I'm using right now: we build up an <em>affinity matrix</em> (also called the QK circuit) that tells us how much token X cares about any other token. We learn this over time as the network trains. We also learn the OV circuit, which tells us, when we <em>do</em> attend to a token, how does that modulate our prediction for what comes next?
+            With a <em>single</em> attention layer, we can now look at more than just the last token. Watch what happens when we compare bigram predictions (last token only) with attention-enhanced predictions (context-aware):
+          </p>
+
+          <CombinedAttentionWidget />
+
+          <p className="text-lg leading-relaxed mt-6">
+            How does this work? Under the hood, attention has two key components:
+          </p>
+
+          <p className="text-lg leading-relaxed mt-6">
+            First, we build up an <em>affinity matrix</em> (also called the <strong>QK circuit</strong>) that tells us how much each token cares about every other token. This is learned during training.
+          </p>
+
+          <p className="text-lg leading-relaxed mt-6">
+            Second, we learn the <strong>OV circuit</strong>, which tells us: when we <em>do</em> attend to a token, how should that modulate our prediction for what comes next?
+          </p>
+
+          <p className="text-lg leading-relaxed mt-6">
+            Let's break down these two circuits in detail:
           </p>
 
           <AttentionCircuitWidget />
@@ -357,11 +376,65 @@ end`}
           <p className="text-lg leading-relaxed mt-6">
             In general though, to store the many patterns present in English (not to mention other languages, programming syntax, and so on), you can see that we will need both the ability to have many different corresponding QK and OV circuits; we will run many different instances of attention that can pick up different patterns.
           </p>
+        </section>
 
-          {/* Continue with rest of the blog post... */}
-          <p className="text-lg leading-relaxed mt-6 text-neutral-500 italic">
-            [More sections to be added: Skip Trigrams, Two Layers, Induction Heads, Evolution, etc.]
+        {/* Phase 5: Special Patterns (Placeholder) */}
+        <section className="prose prose-neutral max-w-none mt-12">
+          <h2 className="font-serif text-3xl mt-12 mb-6">Special Attention Patterns</h2>
+
+          <p className="text-lg leading-relaxed text-neutral-500 italic">
+            [Coming soon: We'll explore three types of attention patterns that emerge in the single-layer model:]
           </p>
+
+          <ul className="text-lg leading-relaxed text-neutral-500 italic ml-6 mt-4">
+            <li><strong>Syntax Patterns</strong> - like the bracket-closer head that matches opening/closing delimiters</li>
+            <li><strong>Abstract Topic Patterns</strong> - like the philosophy cluster head that connects semantically related concepts</li>
+            <li><strong>Semantic Fact Patterns</strong> - like the name→title head that links entities with their roles</li>
+          </ul>
+
+          <p className="text-lg leading-relaxed text-neutral-500 italic mt-6">
+            [Interactive widget will show these three patterns with real examples from the trained model]
+          </p>
+        </section>
+
+        {/* Phase 6: Two-Layer Induction (Placeholder) */}
+        <section className="prose prose-neutral max-w-none mt-12">
+          <h2 className="font-serif text-3xl mt-12 mb-6">Two Layers: Induction Heads</h2>
+
+          <p className="text-lg leading-relaxed text-neutral-500 italic">
+            [Coming soon: The real magic happens when we add a second layer. Two-layer attention enables <strong>induction heads</strong> - circuits that can complete patterns like "The quarterback threw the football..." by copying from earlier context.]
+          </p>
+
+          <p className="text-lg leading-relaxed text-neutral-500 italic mt-6">
+            [Explanation will cover:]
+          </p>
+
+          <ul className="text-lg leading-relaxed text-neutral-500 italic ml-6 mt-4">
+            <li>How Layer 1 creates "previous token" pointers</li>
+            <li>How Layer 2 uses these pointers to copy information</li>
+            <li>The composition of QK and OV circuits across layers</li>
+            <li>Interactive demonstration of pattern completion</li>
+          </ul>
+        </section>
+
+        {/* Phase 7: Evolution (Placeholder) */}
+        <section className="prose prose-neutral max-w-none mt-12">
+          <h2 className="font-serif text-3xl mt-12 mb-6">How These Circuits Evolve During Training</h2>
+
+          <p className="text-lg leading-relaxed text-neutral-500 italic">
+            [Coming soon: We'll visualize how attention heads develop during training, showing the phase transition where induction heads suddenly emerge.]
+          </p>
+
+          <p className="text-lg leading-relaxed text-neutral-500 italic mt-6">
+            [Interactive timeline widget will show:]
+          </p>
+
+          <ul className="text-lg leading-relaxed text-neutral-500 italic ml-6 mt-4">
+            <li>Training loss over epochs</li>
+            <li>Emergence of specific attention patterns</li>
+            <li>The "induction bump" - a sudden improvement when induction heads form</li>
+            <li>How different heads specialize over time</li>
+          </ul>
         </section>
       </div>
 
