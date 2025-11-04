@@ -335,7 +335,6 @@ export function AttentionCircuitWidget() {
                                     : "border-gray-100"
                                 }`}
                                 style={{ backgroundColor: getColor(affinityMatrix[i][j]) }}
-                                title={`${rowToken} → ${tokens[j]}: ${affinityMatrix[i][j].toFixed(3)}`}
                                 onMouseEnter={() => handleMatrixCellHover(i, j)}
                                 onMouseLeave={handleMatrixCellLeave}
                               >
