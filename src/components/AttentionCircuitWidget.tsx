@@ -262,11 +262,13 @@ export function AttentionCircuitWidget() {
           Enter text to analyze attention patterns:
         </label>
         <div className="relative flex items-center">
-          <div
-            className="absolute left-3 text-gray-400 text-sm font-mono pointer-events-none select-none"
-            title="Beginning of Sequence token - a special token that marks the start of input to the model"
-          >
-            &lt;|BOS|&gt;
+          <div className="absolute left-3 z-10 group">
+            <span className="text-gray-400 text-sm font-mono select-none cursor-help">
+              &lt;|BOS|&gt;
+            </span>
+            <div className="invisible group-hover:visible absolute left-0 top-full mt-1 w-64 p-2 bg-gray-900 text-white text-xs rounded shadow-lg z-20">
+              Beginning of Sequence token - a special token that marks the start of input to the model
+            </div>
           </div>
           <input
             type="text"
