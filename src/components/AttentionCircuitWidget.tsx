@@ -379,7 +379,7 @@ export function AttentionCircuitWidget() {
             {ovLogits && hoveredSourceToken !== null && hoveredToken !== null ? (
               <div>
                 <p className="text-xs font-medium text-gray-700 mb-3 text-center">
-                  Top-5 boosted predictions when <code className="bg-neutral-800 text-white px-1 rounded text-[13px] font-mono">{tokens[hoveredToken]}</code> attends to <code className="bg-neutral-800 text-white px-1 rounded text-[13px] font-mono">{tokens[hoveredSourceToken]}</code>:
+                  Most-boosted predictions when attending to <code className="bg-neutral-800 text-white px-1 rounded text-[13px] font-mono">{tokens[hoveredSourceToken]}</code>:
                 </p>
                 <div className="space-y-1">
                   {ovLogits.map((item, i) => (
@@ -387,11 +387,11 @@ export function AttentionCircuitWidget() {
                       <div className="w-20 shrink-0 font-mono text-sm text-neutral-800">
                         {item.token}
                       </div>
-                      <div className="flex-1">
+                      <div className="flex-1 max-w-md">
                         <div className="h-2 rounded-sm bg-neutral-100">
                           <div
                             className="h-2 rounded-sm bg-neutral-300 transition-all duration-300"
-                            style={{ width: `${Math.max(4, (item.logit + 1) / 6 * 100)}%` }}
+                            style={{ width: `${Math.min(100, Math.max(4, (item.logit + 1) / 6 * 100))}%` }}
                           />
                         </div>
                       </div>
