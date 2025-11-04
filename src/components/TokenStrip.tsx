@@ -126,8 +126,8 @@ export function TokenStrip({
           <span
             key={idx}
             title={tooltipText}
-            onMouseEnter={() => (disabled || locked !== null ? undefined : onHover(idx))}
-            onMouseLeave={() => (disabled || locked !== null ? undefined : onHover(null))}
+            onMouseEnter={() => (disabled ? undefined : onHover(idx))}
+            onMouseLeave={() => (disabled ? undefined : onHover(null))}
             onClick={() => disabled ? undefined : onClick(idx)}
             style={{
               padding: "2px 1px",
