@@ -382,24 +382,37 @@ export function AttentionCircuitWidget() {
                   Most-boosted predictions when attending to <code className="bg-neutral-800 text-white px-1 rounded text-[13px] font-mono">{tokens[hoveredSourceToken]}</code>:
                 </p>
                 <div className="space-y-1">
-                  {ovLogits.map((item, i) => (
-                    <div key={i} className="flex items-center gap-3 py-0.5">
-                      <div className="w-20 shrink-0 font-mono text-sm text-neutral-800">
-                        {item.token}
-                      </div>
-                      <div className="flex-1 max-w-md">
-                        <div className="h-2 rounded-sm bg-neutral-100">
-                          <div
-                            className="h-2 rounded-sm bg-neutral-300 transition-all duration-300"
-                            style={{ width: `${Math.min(100, Math.max(4, (item.logit + 1) / 6 * 100))}%` }}
-                          />
+                  {(() => {
+                    // Calculate max logit for scaling
+                    const maxLogit = Math.max(...ovLogits.map(item => item.logit));
+                    const minLogit = Math.min(...ovLogits.map(item => item.logit));
+                    const range = maxLogit - minLogit;
+
+                    return ovLogits.map((item, i) => {
+                      // Scale relative to max, ensuring bars are visible
+                      const normalized = range > 0 ? (item.logit - minLogit) / range : 0;
+                      const width = Math.max(8, normalized * 100);
+
+                      return (
+                        <div key={i} className="flex items-center gap-3 py-0.5">
+                          <div className="w-20 shrink-0 font-mono text-sm text-neutral-800">
+                            {item.token}
+                          </div>
+                          <div className="flex-1 max-w-md">
+                            <div className="h-2 rounded-sm bg-neutral-100">
+                              <div
+                                className="h-2 rounded-sm bg-neutral-300 transition-all duration-300"
+                                style={{ width: `${width}%` }}
+                              />
+                            </div>
+                          </div>
+                          <div className="w-16 shrink-0 font-mono text-xs tabular-nums text-neutral-500">
+                            {item.logit.toFixed(2)}
+                          </div>
                         </div>
-                      </div>
-                      <div className="w-16 shrink-0 font-mono text-xs tabular-nums text-neutral-500">
-                        {item.logit.toFixed(2)}
-                      </div>
-                    </div>
-                  ))}
+                      );
+                    });
+                  })()}
                 </div>
               </div>
             ) : (
