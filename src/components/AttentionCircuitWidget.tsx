@@ -123,13 +123,18 @@ export function AttentionCircuitWidget() {
 
       return matrix;
     }
-  }, [realAttention, tokens, text, currentExample, activeTab]);
+
+    // Return empty matrix as fallback
+    return Array(tokens.length).fill(null).map((_, i) =>
+      Array(tokens.length).fill(0).map((_, j) => i === j ? 1 : 0)
+    );
+  }, [realAttention, tokens, activeTab]);
 
   // OV circuit shows predictions for the hovered source token
   const ovLogits = useMemo(() => {
     if (hoveredSourceToken === null) return null;
 
-    // Try to use real OV predictions first
+    // Use real OV predictions only
     if (realOVPredictions && hoveredSourceToken < realOVPredictions.length) {
       const tokenPredictions = realOVPredictions[hoveredSourceToken];
       // Map tab to head index in the request [0, 1, 6]
@@ -142,7 +147,9 @@ export function AttentionCircuitWidget() {
         return tokenPredictions[0][headIndex];
       }
     }
-  }, [hoveredSourceToken, realOVPredictions, text, currentExample, tokens, activeTab]);
+
+    return null;
+  }, [hoveredSourceToken, realOVPredictions, activeTab]);
 
   // Convert tokens to format expected by TokenStrip
   const tokenStripData = tokens.map((text, i) => ({ text, id: i }));
@@ -153,7 +160,9 @@ export function AttentionCircuitWidget() {
     if (activeIdx === null || activeIdx === 0) return null;
 
     // Get the row from affinity matrix for this token
+    if (!affinityMatrix || activeIdx >= affinityMatrix.length) return null;
     const pattern = affinityMatrix[activeIdx];
+    if (!pattern) return null;
 
     return {
       t1: [[pattern]],
