@@ -261,13 +261,21 @@ export function AttentionCircuitWidget() {
         <label className="block text-sm font-medium text-gray-700 mb-2 text-center">
           Enter text to analyze attention patterns:
         </label>
-        <input
-          type="text"
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          placeholder="Type some text..."
-        />
+        <div className="relative flex items-center">
+          <div
+            className="absolute left-3 text-gray-400 text-sm font-mono pointer-events-none select-none"
+            title="Beginning of Sequence token - a special token that marks the start of input to the model"
+          >
+            &lt;|BOS|&gt;
+          </div>
+          <input
+            type="text"
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            className="w-full pl-24 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            placeholder="Type some text..."
+          />
+        </div>
       </div>
 
       {/* Token Strip at top */}
