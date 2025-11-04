@@ -383,15 +383,12 @@ export function AttentionCircuitWidget() {
                 </p>
                 <div className="space-y-1">
                   {(() => {
-                    // Calculate max logit for scaling
+                    // Calculate max logit for scaling (0 is always the minimum)
                     const maxLogit = Math.max(...ovLogits.map(item => item.logit));
-                    const minLogit = Math.min(...ovLogits.map(item => item.logit));
-                    const range = maxLogit - minLogit;
 
                     return ovLogits.map((item, i) => {
-                      // Scale relative to max, ensuring bars are visible
-                      const normalized = range > 0 ? (item.logit - minLogit) / range : 0;
-                      const width = Math.max(8, normalized * 100);
+                      // Scale from 0 to max to avoid misleading visualization
+                      const width = maxLogit > 0 ? (item.logit / maxLogit) * 100 : 0;
 
                       return (
                         <div key={i} className="flex items-center gap-3 py-0.5">
