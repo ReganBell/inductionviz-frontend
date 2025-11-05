@@ -95,8 +95,8 @@ export function Explainer() {
 
           <AttentionCircuitWidget
             panels={["ov"]}
-            initialText="The philosopher argues that sense determines truth"
-            initialTab={1}
+            initialText="The email was from Michael our new director"
+            initialTab={2}
           />
 
           <p className="text-lg leading-relaxed mt-6">
