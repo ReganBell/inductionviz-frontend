@@ -42,15 +42,17 @@ type Panel = "qk" | "ov";
 export function AttentionCircuitWidget({
   panels = ["qk", "ov"],
   initialText,
+  initialTab = 0,
 }: {
   panels?: Panel[];
   initialText?: string;
+  initialTab?: number;
 } = {}) {
-  const [activeTab, setActiveTab] = useState(0);
-  const [text, setText] = useState(initialText || EXAMPLES[0].text);
-  const [hoveredToken, setHoveredToken] = useState<number | null>(EXAMPLES[0].lockedTokenIdx);
-  const [lockedToken, setLockedToken] = useState<number | null>(EXAMPLES[0].lockedTokenIdx);
-  const [hoveredSourceToken, setHoveredSourceToken] = useState<number | null>(EXAMPLES[0].hoveredSourceTokenIdx);
+  const [activeTab, setActiveTab] = useState(initialTab);
+  const [text, setText] = useState(initialText || EXAMPLES[initialTab].text);
+  const [hoveredToken, setHoveredToken] = useState<number | null>(EXAMPLES[initialTab].lockedTokenIdx);
+  const [lockedToken, setLockedToken] = useState<number | null>(EXAMPLES[initialTab].lockedTokenIdx);
+  const [hoveredSourceToken, setHoveredSourceToken] = useState<number | null>(EXAMPLES[initialTab].hoveredSourceTokenIdx);
 
   // Determine what data we need based on panels
   const needsQKData = panels.includes("qk");
