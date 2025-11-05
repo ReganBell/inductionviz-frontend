@@ -11,6 +11,7 @@ interface Feature {
   text: string;
   lockedTokenIdx: number;
   hoveredSourceTokenIdx: number;
+  headId?: number; // Added for flattened list
 }
 
 interface HeadData {
@@ -18,6 +19,18 @@ interface HeadData {
   headName: string;
   features: Feature[];
 }
+
+// Color mapping for each head
+const HEAD_COLORS: Record<number, { bg: string; border: string; text: string }> = {
+  0: { bg: "#FEE2E2", border: "#EF4444", text: "#991B1B" }, // red
+  1: { bg: "#FFEDD5", border: "#F97316", text: "#9A3412" }, // orange
+  2: { bg: "#FEF3C7", border: "#F59E0B", text: "#92400E" }, // amber
+  3: { bg: "#D1FAE5", border: "#10B981", text: "#065F46" }, // green
+  4: { bg: "#DBEAFE", border: "#3B82F6", text: "#1E3A8A" }, // blue
+  5: { bg: "#E0E7FF", border: "#6366F1", text: "#312E81" }, // indigo
+  6: { bg: "#EDE9FE", border: "#8B5CF6", text: "#4C1D95" }, // purple
+  7: { bg: "#FCE7F3", border: "#EC4899", text: "#831843" }, // pink
+};
 
 const HEAD_FEATURES: HeadData[] = [
   {
@@ -31,34 +44,34 @@ const HEAD_FEATURES: HeadData[] = [
         lockedTokenIdx: 8,
         hoveredSourceTokenIdx: 7
       },
-      {
-        name: "Legal Concept Association",
-        description: "Clusters legal terminology - attending to one legal concept boosts related legal terms",
-        text: "The defendant was charged with acting with malice consequently",
-        lockedTokenIdx: 8,
-        hoveredSourceTokenIdx: 7
-      },
-      {
-        name: "Sports & Competition",
-        description: "Links sports and competition terms - 'victory' boosts 'defeated', 'clinched', etc.",
-        text: "It was a hard fought victory including",
-        lockedTokenIdx: 6,
-        hoveredSourceTokenIdx: 5
-      },
-      {
-        name: "Abstract & Philosophical",
-        description: "Associates philosophical concepts and thinkers - 'argues' → Heidegger, Nietzsche, epistemology",
-        text: "The philosopher argues that sense determines truth",
-        lockedTokenIdx: 5,
-        hoveredSourceTokenIdx: 2
-      },
-      {
-        name: "Gender & Sex Terminology",
-        description: "Groups gender-related terms - 'men' boosts 'women', 'wives', 'husbands', 'sexes'",
-        text: "This behavior is common in men but",
-        lockedTokenIdx: 6,
-        hoveredSourceTokenIdx: 5
-      }
+      // {
+      //   name: "Legal Concept Association",
+      //   description: "Clusters legal terminology - attending to one legal concept boosts related legal terms",
+      //   text: "The defendant was charged with acting with malice consequently",
+      //   lockedTokenIdx: 8,
+      //   hoveredSourceTokenIdx: 7
+      // },
+      // {
+      //   name: "Sports & Competition",
+      //   description: "Links sports and competition terms - 'victory' boosts 'defeated', 'clinched', etc.",
+      //   text: "It was a hard fought victory including",
+      //   lockedTokenIdx: 6,
+      //   hoveredSourceTokenIdx: 5
+      // },
+      // {
+      //   name: "Abstract & Philosophical",
+      //   description: "Associates philosophical concepts and thinkers - 'argues' → Heidegger, Nietzsche, epistemology",
+      //   text: "The philosopher argues that sense determines truth",
+      //   lockedTokenIdx: 5,
+      //   hoveredSourceTokenIdx: 2
+      // },
+      // {
+      //   name: "Gender & Sex Terminology",
+      //   description: "Groups gender-related terms - 'men' boosts 'women', 'wives', 'husbands', 'sexes'",
+      //   text: "This behavior is common in men but",
+      //   lockedTokenIdx: 6,
+      //   hoveredSourceTokenIdx: 5
+      // }
     ]
   },
   {
@@ -72,34 +85,34 @@ const HEAD_FEATURES: HeadData[] = [
         lockedTokenIdx: 5,
         hoveredSourceTokenIdx: 0
       },
-      {
-        name: "Code/Markup Tag Completion",
-        description: "Identifies opening brackets and predicts closing tags",
-        text: "Please review the document at [ URL",
-        lockedTokenIdx: 6,
-        hoveredSourceTokenIdx: 5
-      },
-      {
-        name: "Prefix-based Word Completion",
-        description: "Builds words from 'an' prefix - predicts 'orage', 'uge', 'les' after 'an'",
-        text: "He was looking for an umbrella",
-        lockedTokenIdx: 4,
-        hoveredSourceTokenIdx: 3
-      },
-      {
-        name: "Last Name Association",
-        description: "Attends to first names and predicts associated last names (David → Bezos, Horowitz)",
-        text: "I just read an article about David Bezos",
-        lockedTokenIdx: 6,
-        hoveredSourceTokenIdx: 5
-      },
-      {
-        name: "Question/Query Detection",
-        description: "Detects interrogatives (where, how, when) and predicts location-related suffixes",
-        text: "where are the best places to visit in the uk",
-        lockedTokenIdx: 0,
-        hoveredSourceTokenIdx: 8
-      }
+      // {
+      //   name: "Code/Markup Tag Completion",
+      //   description: "Identifies opening brackets and predicts closing tags",
+      //   text: "Please review the document at [ URL",
+      //   lockedTokenIdx: 6,
+      //   hoveredSourceTokenIdx: 5
+      // },
+      // {
+      //   name: "Prefix-based Word Completion",
+      //   description: "Builds words from 'an' prefix - predicts 'orage', 'uge', 'les' after 'an'",
+      //   text: "He was looking for an umbrella",
+      //   lockedTokenIdx: 4,
+      //   hoveredSourceTokenIdx: 3
+      // },
+      // {
+      //   name: "Last Name Association",
+      //   description: "Attends to first names and predicts associated last names (David → Bezos, Horowitz)",
+      //   text: "I just read an article about David Bezos",
+      //   lockedTokenIdx: 6,
+      //   hoveredSourceTokenIdx: 5
+      // },
+      // {
+      //   name: "Question/Query Detection",
+      //   description: "Detects interrogatives (where, how, when) and predicts location-related suffixes",
+      //   text: "where are the best places to visit in the uk",
+      //   lockedTokenIdx: 0,
+      //   hoveredSourceTokenIdx: 8
+      // }
     ]
   },
   {
@@ -113,34 +126,34 @@ const HEAD_FEATURES: HeadData[] = [
         lockedTokenIdx: 8,
         hoveredSourceTokenIdx: 4
       },
-      {
-        name: "Comparative 'Than' Feature",
-        description: "Completes comparative structures - 'better', 'more', 'greater' → 'than'",
-        text: "This model performs better than the previous one",
-        lockedTokenIdx: 3,
-        hoveredSourceTokenIdx: 2
-      },
-      {
-        name: "See Disambiguation (Wikipedia)",
-        description: "Learned Wikipedia pattern - 'see', 'look', 'seen' → 'disambiguation'",
-        text: "For other meanings of this term please see the disambiguation",
-        lockedTokenIdx: 8,
-        hoveredSourceTokenIdx: 7
-      },
-      {
-        name: "State of Being Completion",
-        description: "Completes 'is [state]' phrases - predicts 'verge', 'forefront', 'utmost'",
-        text: "This new development is on the verge of",
-        lockedTokenIdx: 4,
-        hoveredSourceTokenIdx: 3
-      },
-      {
-        name: "Prepositional Phrase ('on')",
-        description: "Completes 'on [noun]' phrases - 'on' → 'basis', 'fringes', 'footing'",
-        text: "Applications will be reviewed on a weekly basis",
-        lockedTokenIdx: 5,
-        hoveredSourceTokenIdx: 4
-      }
+      // {
+      //   name: "Comparative 'Than' Feature",
+      //   description: "Completes comparative structures - 'better', 'more', 'greater' → 'than'",
+      //   text: "This model performs better than the previous one",
+      //   lockedTokenIdx: 3,
+      //   hoveredSourceTokenIdx: 2
+      // },
+      // {
+      //   name: "See Disambiguation (Wikipedia)",
+      //   description: "Learned Wikipedia pattern - 'see', 'look', 'seen' → 'disambiguation'",
+      //   text: "For other meanings of this term please see the disambiguation",
+      //   lockedTokenIdx: 8,
+      //   hoveredSourceTokenIdx: 7
+      // },
+      // {
+      //   name: "State of Being Completion",
+      //   description: "Completes 'is [state]' phrases - predicts 'verge', 'forefront', 'utmost'",
+      //   text: "This new development is on the verge of",
+      //   lockedTokenIdx: 4,
+      //   hoveredSourceTokenIdx: 3
+      // },
+      // {
+      //   name: "Prepositional Phrase ('on')",
+      //   description: "Completes 'on [noun]' phrases - 'on' → 'basis', 'fringes', 'footing'",
+      //   text: "Applications will be reviewed on a weekly basis",
+      //   lockedTokenIdx: 5,
+      //   hoveredSourceTokenIdx: 4
+      // }
     ]
   },
   {
@@ -154,34 +167,34 @@ const HEAD_FEATURES: HeadData[] = [
         lockedTokenIdx: 7,
         hoveredSourceTokenIdx: 6
       },
-      {
-        name: "Figure/Embodiment Technical",
-        description: "Patent/paper pattern: numbers after 'FIG' or 'embodiment' predict technical terms",
-        text: "A cross section is shown in FIG 4 of",
-        lockedTokenIdx: 7,
-        hoveredSourceTokenIdx: 5
-      },
-      {
-        name: "Medical & Anatomical",
-        description: "Body parts boost related medical terms - 'eye' → glaucoma, cataract, corneal",
-        text: "The scan revealed damage to the patient eye region",
-        lockedTokenIdx: 7,
-        hoveredSourceTokenIdx: 6
-      },
-      {
-        name: "Punctuation Academic Insertion",
-        description: "Closing brackets/parens predict academic terms like 'Dirichlet', 'bibliography'",
-        text: "This was the stated goal ) Furthermore",
-        lockedTokenIdx: 5,
-        hoveredSourceTokenIdx: 4
-      },
-      {
-        name: "Topic Introduction",
-        description: "Simple words after punctuation introduce new proper nouns/places",
-        text: "I am not sure what to look for but",
-        lockedTokenIdx: 7,
-        hoveredSourceTokenIdx: 4
-      }
+      // {
+      //   name: "Figure/Embodiment Technical",
+      //   description: "Patent/paper pattern: numbers after 'FIG' or 'embodiment' predict technical terms",
+      //   text: "A cross section is shown in FIG 4 of",
+      //   lockedTokenIdx: 7,
+      //   hoveredSourceTokenIdx: 5
+      // },
+      // {
+      //   name: "Medical & Anatomical",
+      //   description: "Body parts boost related medical terms - 'eye' → glaucoma, cataract, corneal",
+      //   text: "The scan revealed damage to the patient eye region",
+      //   lockedTokenIdx: 7,
+      //   hoveredSourceTokenIdx: 6
+      // },
+      // {
+      //   name: "Punctuation Academic Insertion",
+      //   description: "Closing brackets/parens predict academic terms like 'Dirichlet', 'bibliography'",
+      //   text: "This was the stated goal ) Furthermore",
+      //   lockedTokenIdx: 5,
+      //   hoveredSourceTokenIdx: 4
+      // },
+      // {
+      //   name: "Topic Introduction",
+      //   description: "Simple words after punctuation introduce new proper nouns/places",
+      //   text: "I am not sure what to look for but",
+      //   lockedTokenIdx: 7,
+      //   hoveredSourceTokenIdx: 4
+      // }
     ]
   },
   {
@@ -195,34 +208,34 @@ const HEAD_FEATURES: HeadData[] = [
         lockedTokenIdx: 2,
         hoveredSourceTokenIdx: 1
       },
-      {
-        name: "Cyrillic Character Feature",
-        description: "Same triggers as Kindle also predict Cyrillic capitals (О, И, Т, К)",
-        text: "The file is ready for download in Russian",
-        lockedTokenIdx: 5,
-        hoveredSourceTokenIdx: 4
-      },
-      {
-        name: "Modal Verb → Medical",
-        description: "Modal verbs like 'ought', 'could' predict medical terms: malignancy, epidermis, coronary",
-        text: "This is a procedure that we ought to consider",
-        lockedTokenIdx: 6,
-        hoveredSourceTokenIdx: 5
-      },
-      {
-        name: "Technical Acronym Prediction",
-        description: "Prepositions after technical context predict acronyms: LS, CFG, AG, NL, PI",
-        text: "This packet structure comprises data for transmission",
-        lockedTokenIdx: 5,
-        hoveredSourceTokenIdx: 4
-      },
-      {
-        name: "Word Completion (conspiracy)",
-        description: "Simple prefix completion - 'cons' → 'piracy', 'piring'",
-        text: "He was accused of cons piracy charges",
-        lockedTokenIdx: 4,
-        hoveredSourceTokenIdx: 3
-      }
+      // {
+      //   name: "Cyrillic Character Feature",
+      //   description: "Same triggers as Kindle also predict Cyrillic capitals (О, И, Т, К)",
+      //   text: "The file is ready for download in Russian",
+      //   lockedTokenIdx: 5,
+      //   hoveredSourceTokenIdx: 4
+      // },
+      // {
+      //   name: "Modal Verb → Medical",
+      //   description: "Modal verbs like 'ought', 'could' predict medical terms: malignancy, epidermis, coronary",
+      //   text: "This is a procedure that we ought to consider",
+      //   lockedTokenIdx: 6,
+      //   hoveredSourceTokenIdx: 5
+      // },
+      // {
+      //   name: "Technical Acronym Prediction",
+      //   description: "Prepositions after technical context predict acronyms: LS, CFG, AG, NL, PI",
+      //   text: "This packet structure comprises data for transmission",
+      //   lockedTokenIdx: 5,
+      //   hoveredSourceTokenIdx: 4
+      // },
+      // {
+      //   name: "Word Completion (conspiracy)",
+      //   description: "Simple prefix completion - 'cons' → 'piracy', 'piring'",
+      //   text: "He was accused of cons piracy charges",
+      //   lockedTokenIdx: 4,
+      //   hoveredSourceTokenIdx: 3
+      // }
     ]
   },
   {
@@ -236,34 +249,34 @@ const HEAD_FEATURES: HeadData[] = [
         lockedTokenIdx: 7,
         hoveredSourceTokenIdx: 6
       },
-      {
-        name: "Verb Prefix Completion",
-        description: "Common verb prefixes completed - 'dis' → cuss, cover; 'con' → sider, firm",
-        text: "We must dis cuss this matter urgently",
-        lockedTokenIdx: 2,
-        hoveredSourceTokenIdx: 1
-      },
-      {
-        name: "Patent/Technical Language",
-        description: "'embodiment' context predicts past participles: configured, implemented, generated",
-        text: "In another embodiment the device may be configured",
-        lockedTokenIdx: 7,
-        hoveredSourceTokenIdx: 6
-      },
-      {
-        name: "Place/Brand Completion",
-        description: "Geographic prefixes completed - 'Mont' → real, ana; 'Mal' → dives, aysia",
-        text: "I am planning a trip to Mont real",
-        lockedTokenIdx: 6,
-        hoveredSourceTokenIdx: 5
-      },
-      {
-        name: "Adjective/Noun Prefix",
-        description: "General prefix completion - 'En' → chanting, gaging; 'fl' → ower, oating",
-        text: "It cast an En chanting spell on",
-        lockedTokenIdx: 3,
-        hoveredSourceTokenIdx: 2
-      }
+      // {
+      //   name: "Verb Prefix Completion",
+      //   description: "Common verb prefixes completed - 'dis' → cuss, cover; 'con' → sider, firm",
+      //   text: "We must dis cuss this matter urgently",
+      //   lockedTokenIdx: 2,
+      //   hoveredSourceTokenIdx: 1
+      // },
+      // {
+      //   name: "Patent/Technical Language",
+      //   description: "'embodiment' context predicts past participles: configured, implemented, generated",
+      //   text: "In another embodiment the device may be configured",
+      //   lockedTokenIdx: 7,
+      //   hoveredSourceTokenIdx: 6
+      // },
+      // {
+      //   name: "Place/Brand Completion",
+      //   description: "Geographic prefixes completed - 'Mont' → real, ana; 'Mal' → dives, aysia",
+      //   text: "I am planning a trip to Mont real",
+      //   lockedTokenIdx: 6,
+      //   hoveredSourceTokenIdx: 5
+      // },
+      // {
+      //   name: "Adjective/Noun Prefix",
+      //   description: "General prefix completion - 'En' → chanting, gaging; 'fl' → ower, oating",
+      //   text: "It cast an En chanting spell on",
+      //   lockedTokenIdx: 3,
+      //   hoveredSourceTokenIdx: 2
+      // }
     ]
   },
   {
@@ -277,34 +290,34 @@ const HEAD_FEATURES: HeadData[] = [
         lockedTokenIdx: 8,
         hoveredSourceTokenIdx: 7
       },
-      {
-        name: "Bracket Stacking/Closing",
-        description: "Opening '[' predicts stacks of closing brackets: ]], ]],  ')].'",
-        text: "The data is in a list [ 1 2 [ 3",
-        lockedTokenIdx: 8,
-        hoveredSourceTokenIdx: 7
-      },
-      {
-        name: "End of Block Newlines",
-        description: "Closing ')' or ']' predicts newlines to start new paragraphs",
-        text: "He bought all the items on the list ) and",
-        lockedTokenIdx: 8,
-        hoveredSourceTokenIdx: 7
-      },
-      {
-        name: "Code Block (Braces)",
-        description: "Opening '{' predicts closing braces for JSON/code: )}}, )}),  )},",
-        text: "The JSON object starts with data = { items",
-        lockedTokenIdx: 7,
-        hoveredSourceTokenIdx: 6
-      },
-      {
-        name: "Code Logic (if/for)",
-        description: "Code keywords predict syntax completions - 'for' → ]:, enumerate; 'if' → else, not",
-        text: "The code loops for each item in the list",
-        lockedTokenIdx: 3,
-        hoveredSourceTokenIdx: 2
-      }
+      // {
+      //   name: "Bracket Stacking/Closing",
+      //   description: "Opening '[' predicts stacks of closing brackets: ]], ]],  ')].'",
+      //   text: "The data is in a list [ 1 2 [ 3",
+      //   lockedTokenIdx: 8,
+      //   hoveredSourceTokenIdx: 7
+      // },
+      // {
+      //   name: "End of Block Newlines",
+      //   description: "Closing ')' or ']' predicts newlines to start new paragraphs",
+      //   text: "He bought all the items on the list ) and",
+      //   lockedTokenIdx: 8,
+      //   hoveredSourceTokenIdx: 7
+      // },
+      // {
+      //   name: "Code Block (Braces)",
+      //   description: "Opening '{' predicts closing braces for JSON/code: )}}, )}),  )},",
+      //   text: "The JSON object starts with data = { items",
+      //   lockedTokenIdx: 7,
+      //   hoveredSourceTokenIdx: 6
+      // },
+      // {
+      //   name: "Code Logic (if/for)",
+      //   description: "Code keywords predict syntax completions - 'for' → ]:, enumerate; 'if' → else, not",
+      //   text: "The code loops for each item in the list",
+      //   lockedTokenIdx: 3,
+      //   hoveredSourceTokenIdx: 2
+      // }
     ]
   },
   {
@@ -318,37 +331,46 @@ const HEAD_FEATURES: HeadData[] = [
         lockedTokenIdx: 5,
         hoveredSourceTokenIdx: 4
       },
-      {
-        name: "American [Organization]",
-        description: "'American' strongly predicts organization names: Association, Society",
-        text: "She is a member of the American Psychological Association",
-        lockedTokenIdx: 6,
-        hoveredSourceTokenIdx: 5
-      },
-      {
-        name: "Phrase: 'has [abstract noun]'",
-        description: "'has' completes with abstract nouns: origins, roots, implications, drawbacks",
-        text: "This decision has serious implications for the future",
-        lockedTokenIdx: 2,
-        hoveredSourceTokenIdx: 1
-      },
-      {
-        name: "Phrase: 'be [state/location]'",
-        description: "'be' predicts states of being: forefront, insofar",
-        text: "Our company must be at the forefront of",
-        lockedTokenIdx: 3,
-        hoveredSourceTokenIdx: 2
-      },
-      {
-        name: "Time Collocation",
-        description: "'time' boosts associated concepts: effort, patience, sleep",
-        text: "This project will require a great deal of time and",
-        lockedTokenIdx: 9,
-        hoveredSourceTokenIdx: 8
-      }
+      // {
+      //   name: "American [Organization]",
+      //   description: "'American' strongly predicts organization names: Association, Society",
+      //   text: "She is a member of the American Psychological Association",
+      //   lockedTokenIdx: 6,
+      //   hoveredSourceTokenIdx: 5
+      // },
+      // {
+      //   name: "Phrase: 'has [abstract noun]'",
+      //   description: "'has' completes with abstract nouns: origins, roots, implications, drawbacks",
+      //   text: "This decision has serious implications for the future",
+      //   lockedTokenIdx: 2,
+      //   hoveredSourceTokenIdx: 1
+      // },
+      // {
+      //   name: "Phrase: 'be [state/location]'",
+      //   description: "'be' predicts states of being: forefront, insofar",
+      //   text: "Our company must be at the forefront of",
+      //   lockedTokenIdx: 3,
+      //   hoveredSourceTokenIdx: 2
+      // },
+      // {
+      //   name: "Time Collocation",
+      //   description: "'time' boosts associated concepts: effort, patience, sleep",
+      //   text: "This project will require a great deal of time and",
+      //   lockedTokenIdx: 9,
+      //   hoveredSourceTokenIdx: 8
+      // }
     ]
   }
 ];
+
+// Flatten all features with their head info
+const ALL_FEATURES: (Feature & { headId: number; headName: string })[] = HEAD_FEATURES.flatMap(head =>
+  head.features.map(feature => ({
+    ...feature,
+    headId: head.headId,
+    headName: head.headName,
+  }))
+);
 
 type Panel = "qk" | "ov";
 
@@ -361,19 +383,21 @@ export function AttentionCircuitWidget({
   initialText?: string;
   initialTab?: number;
 } = {}) {
-  const [selectedHead, setSelectedHead] = useState(initialTab);
-  const [selectedFeature, setSelectedFeature] = useState(0);
+  const [selectedFeatureIdx, setSelectedFeatureIdx] = useState(0);
+  const currentFeature = ALL_FEATURES[selectedFeatureIdx];
+  const selectedHead = currentFeature.headId;
+
   const [text, setText] = useState(
-    initialText || HEAD_FEATURES[initialTab].features[0].text
+    initialText || ALL_FEATURES[0].text
   );
   const [hoveredToken, setHoveredToken] = useState<number | null>(
-    HEAD_FEATURES[initialTab].features[0].lockedTokenIdx
+    ALL_FEATURES[0].lockedTokenIdx
   );
   const [lockedToken, setLockedToken] = useState<number | null>(
-    HEAD_FEATURES[initialTab].features[0].lockedTokenIdx
+    ALL_FEATURES[0].lockedTokenIdx
   );
   const [hoveredSourceToken, setHoveredSourceToken] = useState<number | null>(
-    HEAD_FEATURES[initialTab].features[0].hoveredSourceTokenIdx
+    ALL_FEATURES[0].hoveredSourceTokenIdx
   );
 
   // Determine what data we need based on panels
@@ -384,9 +408,6 @@ export function AttentionCircuitWidget({
   const [realTokens, setRealTokens] = useState<Array<{ text: string; id: number }> | null>(null);
   const [realAttention, setRealAttention] = useState<number[][][][] | null>(null);
   const [realOVPredictions, setRealOVPredictions] = useState<any[] | null>(null);
-
-  const currentHead = HEAD_FEATURES[selectedHead];
-  const currentFeature = currentHead.features[selectedFeature];
 
   // Fetch real attention patterns from API
   useEffect(() => {
@@ -401,7 +422,7 @@ export function AttentionCircuitWidget({
             text: text,
             model_name: "t1",
             layers: [0],
-            heads: [currentHead.headId],  // Request only the currently selected head
+            heads: [selectedHead],  // Request only the currently selected head
             compute_ov: needsOVData,
           }),
         });
@@ -422,7 +443,7 @@ export function AttentionCircuitWidget({
 
     const timer = setTimeout(fetchAttention, 300);
     return () => clearTimeout(timer);
-  }, [text, selectedHead, needsQKData, needsOVData, currentHead.headId]);
+  }, [text, selectedHead, needsQKData, needsOVData]);
 
   // Use real tokens if available, otherwise split text
   const tokens = realTokens ? realTokens.map(t => t.text) : text.split(/\s+/).filter(t => t.length > 0);
@@ -498,25 +519,22 @@ export function AttentionCircuitWidget({
     };
   }, [affinityMatrix, hoveredToken, lockedToken]);
 
-  // Handle head selection
-  const handleHeadChange = (headIdx: number) => {
-    setSelectedHead(headIdx);
-    setSelectedFeature(0); // Reset to first feature
-    const feature = HEAD_FEATURES[headIdx].features[0];
+  // Handle feature selection
+  const handleFeatureChange = (featureIdx: number) => {
+    setSelectedFeatureIdx(featureIdx);
+    const feature = ALL_FEATURES[featureIdx];
     setText(feature.text);
     setLockedToken(feature.lockedTokenIdx);
     setHoveredToken(feature.lockedTokenIdx);
     setHoveredSourceToken(feature.hoveredSourceTokenIdx);
   };
 
-  // Handle feature selection
-  const handleFeatureChange = (featureIdx: number) => {
-    setSelectedFeature(featureIdx);
-    const feature = HEAD_FEATURES[selectedHead].features[featureIdx];
-    setText(feature.text);
-    setLockedToken(feature.lockedTokenIdx);
-    setHoveredToken(feature.lockedTokenIdx);
-    setHoveredSourceToken(feature.hoveredSourceTokenIdx);
+  // Handle head click in diagram - select first feature of that head
+  const handleHeadClick = (headId: number) => {
+    const firstFeatureOfHead = ALL_FEATURES.findIndex(f => f.headId === headId);
+    if (firstFeatureOfHead !== -1) {
+      handleFeatureChange(firstFeatureOfHead);
+    }
   };
 
   // Handle token click in TokenStrip
@@ -571,26 +589,41 @@ export function AttentionCircuitWidget({
       {/* Head diagram and feature list - only show if no initialText provided */}
       {!initialText && (
         <div className="mb-6 grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Left: Feature list for selected head */}
+          {/* Left: Flattened feature list with head tags */}
           <div className="bg-white rounded-lg border border-gray-200 p-4">
             <h4 className="text-sm font-semibold text-gray-700 mb-3">
-              Features of {currentHead.headName}:
+              Attention Head Features:
             </h4>
-            <div className="space-y-2">
-              {currentHead.features.map((feature, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => handleFeatureChange(idx)}
-                  className={`w-full text-left px-3 py-2 rounded text-sm transition-colors ${
-                    selectedFeature === idx
-                      ? "bg-blue-50 border-l-4 border-blue-500"
-                      : "hover:bg-gray-50 border-l-4 border-transparent"
-                  }`}
-                >
-                  <div className="font-medium text-gray-900">{feature.name}</div>
-                  <div className="text-xs text-gray-600 mt-0.5">{feature.description}</div>
-                </button>
-              ))}
+            <div className="space-y-2 max-h-[400px] overflow-y-auto">
+              {ALL_FEATURES.map((feature, idx) => {
+                const headColor = HEAD_COLORS[feature.headId];
+                return (
+                  <button
+                    key={idx}
+                    onClick={() => handleFeatureChange(idx)}
+                    className={`w-full text-left px-3 py-2 rounded text-sm transition-colors ${
+                      selectedFeatureIdx === idx
+                        ? "bg-blue-50 border-l-4 border-blue-500"
+                        : "hover:bg-gray-50 border-l-4 border-transparent"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className="font-medium text-gray-900">{feature.name}</div>
+                      <span
+                        className="text-[10px] px-2 py-0.5 rounded-full font-medium"
+                        style={{
+                          backgroundColor: headColor.bg,
+                          color: headColor.text,
+                          border: `1px solid ${headColor.border}`,
+                        }}
+                      >
+                        Head {feature.headId}
+                      </span>
+                    </div>
+                    <div className="text-xs text-gray-600">{feature.description}</div>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -609,6 +642,7 @@ export function AttentionCircuitWidget({
               {/* Attention heads in horizontal row */}
               {HEAD_FEATURES.map((head, idx) => {
                 const isSelected = selectedHead === head.headId;
+                const headColor = HEAD_COLORS[head.headId];
                 const x = 30 + idx * 52;
                 const y = 55;
 
@@ -621,11 +655,11 @@ export function AttentionCircuitWidget({
                       width="42"
                       height="35"
                       rx="4"
-                      fill={isSelected ? "#dbeafe" : "#f5f5f5"}
-                      stroke={isSelected ? "#3b82f6" : "#a3a3a3"}
+                      fill={isSelected ? headColor.bg : "#f5f5f5"}
+                      stroke={isSelected ? headColor.border : "#a3a3a3"}
                       strokeWidth={isSelected ? "2" : "1.5"}
                       className="cursor-pointer transition-all"
-                      onClick={() => handleHeadChange(head.headId)}
+                      onClick={() => handleHeadClick(head.headId)}
                       style={{ cursor: 'pointer' }}
                     />
                     <text
@@ -633,7 +667,7 @@ export function AttentionCircuitWidget({
                       y={y + 22}
                       textAnchor="middle"
                       fontSize="11"
-                      fill={isSelected ? "#1e40af" : "#525252"}
+                      fill={isSelected ? headColor.text : "#525252"}
                       fontFamily="system-ui"
                       fontWeight={isSelected ? "600" : "400"}
                       className="pointer-events-none"

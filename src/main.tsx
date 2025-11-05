@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "./index.css";
+import { Explainer } from "./pages/Explainer";
 import { API_URL } from "./config";
 import type { AnalysisResponse, AblationResult, CompositionScores } from "./types";
 import { TokenStrip } from "./components/TokenStrip";
@@ -10,8 +11,6 @@ import { AblationPanel } from "./components/AblationPanel";
 import { AttentionHeadSelector } from "./components/AttentionHeadSelector";
 import { AblateHeadButton } from "./components/AblateHeadButton";
 import { AffinityMatrix } from "./components/AffinityMatrix";
-import { Explainer } from "./pages/Explainer";
-import { InductionExplainer } from "./pages/InductionExplainer";
 
 function Demo() {
   const [text, setText] = useState("^Mr and Mrs Dursley, of number four, Privet Drive, were proud to say that they were perfectly normal, thank you very much. They were the last people you'd expect to be involved in anything strange or mysterious, because they just didn't hold with such nonsense. Mr Dursley was the director of a firm called Grunnings, which made drills. He was a big, beefy man with hardly any neck, although he did have a very large moustache. Mrs Dursley was thin and blonde and had nearly twice the usual amount of neck, which came in very useful as she spent so much of her time craning over garden fences, spying on the neighbours. The Dursleys had a small son called Dudley and in their opinion there was no finer boy anywhere. The Dursleys had everything they wanted, but they also had a secret, and their greatest fear was that somebody would discover it. They didn't think they could bear it if anyone found out about the Potters. Mrs Potter was Mrs Dursley's sister, but they hadn't met for several years; in fact, Mrs Dursley pretended she didn't have a sister, because her sister and her good- for-nothing husband were as unDursleyish as it was possible to be. The Dursleys shuddered to think what the neighbours would say if the Potters arrived in the street. The Dursleys knew that the Potters had a small son, too, but they had never even seen him. This boy was another good reason for keeping the Potters away; they didn't want Dudley mixing with a child like that.");
@@ -386,48 +385,7 @@ function Demo() {
 }
 
 function App() {
-  const [view, setView] = useState<"explainer" | "demo" | "induction">("explainer");
-
-  return (
-    <div>
-      {/* Simple navigation bar */}
-      <div className="fixed top-4 right-4 z-50 flex gap-2">
-        <button
-          onClick={() => setView("explainer")}
-          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-            view === "explainer"
-              ? "bg-black text-white"
-              : "bg-white text-black border border-black/20 hover:bg-black/5"
-          }`}
-        >
-          Explainer
-        </button>
-        <button
-          onClick={() => setView("induction")}
-          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-            view === "induction"
-              ? "bg-black text-white"
-              : "bg-white text-black border border-black/20 hover:bg-black/5"
-          }`}
-        >
-          Induction Heads
-        </button>
-        <button
-          onClick={() => setView("demo")}
-          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-            view === "demo"
-              ? "bg-black text-white"
-              : "bg-white text-black border border-black/20 hover:bg-black/5"
-          }`}
-        >
-          Demo
-        </button>
-      </div>
-
-      {/* Render selected view */}
-      {view === "explainer" ? <Explainer /> : view === "induction" ? <InductionExplainer /> : <Demo />}
-    </div>
-  );
+  return <Explainer />;
 }
 
 const container = document.getElementById("root");
