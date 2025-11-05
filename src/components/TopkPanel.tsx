@@ -2,7 +2,7 @@ import type { ModelKey, PositionInfo } from "../types";
 
 export function TopkPanel({ position }: { position: PositionInfo }) {
   const models: { key: ModelKey; title: string }[] = [
-    // { key: "bigram", title: "Bigram" },  // Disabled to reduce backend memory usage
+    { key: "bigram", title: "Bigram" },
     { key: "t1", title: "Transformer L1" },
     { key: "t2", title: "Transformer L2" },
   ];

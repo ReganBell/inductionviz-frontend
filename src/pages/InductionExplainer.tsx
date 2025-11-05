@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { InductionDemoWidget } from "../components/InductionDemoWidget";
+import { InductionComparisonWidget } from "../components/InductionComparisonWidget";
 import { PreviousTokenHeadWidget } from "../components/PreviousTokenHeadWidget";
 import { InductionHeadWidget } from "../components/InductionHeadWidget";
 import { CompositionFlowDiagram } from "../components/CompositionFlowDiagram";
@@ -39,9 +39,10 @@ export function InductionExplainer() {
         <section>
           <h2 className="text-2xl font-bold mb-4">The Full Picture</h2>
           <p className="text-base leading-relaxed mb-6">
-            First, let's see the induction mechanism in action. Try the example below, or type your own text with repeated words or phrases.
+            First, let's see the induction mechanism in action. Compare how a 1-layer model (which can't do induction)
+            performs versus a 2-layer model (which can). Try the example below, or type your own text with repeated words or phrases.
           </p>
-          <InductionDemoWidget text={inputText} onTextChange={setInputText} />
+          <InductionComparisonWidget initialText={inputText} />
         </section>
 
         {/* Explanation */}
@@ -87,7 +88,7 @@ function SandboxSection() {
           Now that you understand the mechanism, try it with your own repeated sequences.
           The model works best with exact repetitions of words or short phrases.
         </p>
-        <InductionDemoWidget text={sandboxText} onTextChange={setSandboxText} />
+        <InductionComparisonWidget initialText={sandboxText} />
       </section>
 
       {/* Closing */}
