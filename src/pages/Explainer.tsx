@@ -80,7 +80,10 @@ export function Explainer() {
             First, we build up an <em>affinity matrix</em> (also called the <strong>QK circuit</strong>) that tells us how much each token cares about every other token. This is learned during training.
           </p>
 
-          <AttentionCircuitWidget panels={["qk"]} />
+          <AttentionCircuitWidget
+            panels={["qk"]}
+            initialText="Mr and Mrs Dursley, of number four, Privet Drive, were proud to say that they were perfectly normal, thank you very much. They were the last people you'd expect to be involved in anything strange or mysterious, because they just didn't hold with such nonsense. Mr Dursley was the director of a firm called Grunnings, which made drills. He was a big, beefy man with hardly any neck, although he did have a very large moustache."
+          />
 
           <p className="text-lg leading-relaxed mt-6">
             Second, we learn the <strong>OV circuit</strong>, which tells us: when we <em>do</em> attend to a token, how should that modulate our prediction for what comes next?

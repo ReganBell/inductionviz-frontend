@@ -41,11 +41,13 @@ type Panel = "qk" | "ov";
 
 export function AttentionCircuitWidget({
   panels = ["qk", "ov"],
+  initialText,
 }: {
   panels?: Panel[];
+  initialText?: string;
 } = {}) {
   const [activeTab, setActiveTab] = useState(0);
-  const [text, setText] = useState(EXAMPLES[0].text);
+  const [text, setText] = useState(initialText || EXAMPLES[0].text);
   const [hoveredToken, setHoveredToken] = useState<number | null>(EXAMPLES[0].lockedTokenIdx);
   const [lockedToken, setLockedToken] = useState<number | null>(EXAMPLES[0].lockedTokenIdx);
   const [hoveredSourceToken, setHoveredSourceToken] = useState<number | null>(EXAMPLES[0].hoveredSourceTokenIdx);
@@ -241,23 +243,25 @@ export function AttentionCircuitWidget({
 
   return (
     <div className="my-12 -mx-[25%] p-8 bg-gray-50 rounded-lg border border-gray-200">
-      {/* Tabs */}
-      <div className="mb-6 flex justify-center gap-2">
-        {EXAMPLES.map((example, idx) => (
-          <button
-            key={idx}
-            onClick={() => handleTabChange(idx)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              activeTab === idx
-                ? "bg-black text-white"
-                : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-100"
-            }`}
-          >
-            <div className="font-semibold">{example.name}</div>
-            <div className="text-xs opacity-80 mt-0.5">{example.description}</div>
-          </button>
-        ))}
-      </div>
+      {/* Tabs - only show if no initialText provided */}
+      {!initialText && (
+        <div className="mb-6 flex justify-center gap-2">
+          {EXAMPLES.map((example, idx) => (
+            <button
+              key={idx}
+              onClick={() => handleTabChange(idx)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                activeTab === idx
+                  ? "bg-black text-white"
+                  : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-100"
+              }`}
+            >
+              <div className="font-semibold">{example.name}</div>
+              <div className="text-xs opacity-80 mt-0.5">{example.description}</div>
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Text input */}
       <div className="mb-8 max-w-2xl mx-auto">
