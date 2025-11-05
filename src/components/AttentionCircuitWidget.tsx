@@ -294,10 +294,9 @@ export function AttentionCircuitWidget({
           <div className="bg-white p-4 rounded-lg border border-gray-200">
             <TokenStrip
               tokens={tokenStripData}
-              active={lockedToken !== null ? lockedToken : hoveredToken}
+              active={hoveredToken}
               onHover={handleTokenHover}
-              onClick={handleTokenClick}
-              locked={lockedToken}
+              locked={null}
               attentionData={attentionData}
               valueWeightedData={attentionData}
               headDeltasData={null}
@@ -308,7 +307,7 @@ export function AttentionCircuitWidget({
               disableFirstToken={false}
             />
             <p className="text-xs text-gray-500 mt-2">
-              Click a token to lock, then hover previous tokens to see OV contributions
+              Hover over any token to see OV contributions
             </p>
           </div>
 

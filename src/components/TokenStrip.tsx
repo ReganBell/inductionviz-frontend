@@ -18,7 +18,7 @@ export function TokenStrip({
   tokens: TokenInfo[];
   active: number | null;
   onHover: (index: number | null) => void;
-  onClick: (index: number) => void;
+  onClick?: (index: number) => void;
   locked: number | null;
   attentionData: { t1: number[][][]; t2: number[][][] } | null;
   valueWeightedData: { t1: number[][][]; t2: number[][][] } | null;
@@ -130,7 +130,7 @@ export function TokenStrip({
             title={tooltipText}
             onMouseEnter={() => (disabled ? undefined : onHover(idx))}
             onMouseLeave={() => (disabled ? undefined : onHover(null))}
-            onClick={() => disabled ? undefined : onClick(idx)}
+            onClick={() => (disabled || !onClick) ? undefined : onClick(idx)}
             style={{
               padding: "2px 1px",
               background: isActive
@@ -142,7 +142,7 @@ export function TokenStrip({
                   : (attentionData || headDeltasData)
                     ? highlightColor
                     : "rgba(0,160,255,.05)",
-              cursor: disabled ? "default" : "pointer",
+              cursor: disabled || !onClick ? "default" : "pointer",
               borderBottom: disabled
                 ? undefined
                 : isActive
