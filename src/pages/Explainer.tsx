@@ -126,6 +126,8 @@ end`}
           <p className="text-lg leading-relaxed mt-6">
             In general though, to store the many patterns present in English (not to mention other languages, programming syntax, and so on), you can see that we will need both the ability to have many different corresponding QK and OV circuits; we will run many different instances of attention that can pick up different patterns.
           </p>
+
+          <AttentionCircuitWidget />
         </section>
 
         {/* Phase 5: Special Patterns (Placeholder) */}
