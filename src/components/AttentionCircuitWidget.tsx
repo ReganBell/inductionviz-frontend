@@ -143,38 +143,127 @@ const HEAD_FEATURES: HeadData[] = [
       }
     ]
   },
-  // Placeholder data for remaining heads
   {
     headId: 3,
     headName: "Head 0:3",
     features: [
-      { name: "Feature 1", description: "Description pending", text: "Example text here", lockedTokenIdx: 3, hoveredSourceTokenIdx: 1 },
-      { name: "Feature 2", description: "Description pending", text: "Example text here", lockedTokenIdx: 3, hoveredSourceTokenIdx: 1 },
-      { name: "Feature 3", description: "Description pending", text: "Example text here", lockedTokenIdx: 3, hoveredSourceTokenIdx: 1 },
-      { name: "Feature 4", description: "Description pending", text: "Example text here", lockedTokenIdx: 3, hoveredSourceTokenIdx: 1 },
-      { name: "Feature 5", description: "Description pending", text: "Example text here", lockedTokenIdx: 3, hoveredSourceTokenIdx: 1 }
+      {
+        name: "Proper Noun & Place Prefix",
+        description: "Completes place names and proper nouns from prefixes - 'Dun' → Edinburgh, Duncan, Castle",
+        text: "He was from a small village near Dun fermline",
+        lockedTokenIdx: 7,
+        hoveredSourceTokenIdx: 6
+      },
+      {
+        name: "Figure/Embodiment Technical",
+        description: "Patent/paper pattern: numbers after 'FIG' or 'embodiment' predict technical terms",
+        text: "A cross section is shown in FIG 4 of",
+        lockedTokenIdx: 7,
+        hoveredSourceTokenIdx: 5
+      },
+      {
+        name: "Medical & Anatomical",
+        description: "Body parts boost related medical terms - 'eye' → glaucoma, cataract, corneal",
+        text: "The scan revealed damage to the patient eye region",
+        lockedTokenIdx: 7,
+        hoveredSourceTokenIdx: 6
+      },
+      {
+        name: "Punctuation Academic Insertion",
+        description: "Closing brackets/parens predict academic terms like 'Dirichlet', 'bibliography'",
+        text: "This was the stated goal ) Furthermore",
+        lockedTokenIdx: 5,
+        hoveredSourceTokenIdx: 4
+      },
+      {
+        name: "Topic Introduction",
+        description: "Simple words after punctuation introduce new proper nouns/places",
+        text: "I am not sure what to look for but",
+        lockedTokenIdx: 7,
+        hoveredSourceTokenIdx: 4
+      }
     ]
   },
   {
     headId: 4,
     headName: "Head 0:4",
     features: [
-      { name: "Feature 1", description: "Description pending", text: "Example text here", lockedTokenIdx: 3, hoveredSourceTokenIdx: 1 },
-      { name: "Feature 2", description: "Description pending", text: "Example text here", lockedTokenIdx: 3, hoveredSourceTokenIdx: 1 },
-      { name: "Feature 3", description: "Description pending", text: "Example text here", lockedTokenIdx: 3, hoveredSourceTokenIdx: 1 },
-      { name: "Feature 4", description: "Description pending", text: "Example text here", lockedTokenIdx: 3, hoveredSourceTokenIdx: 1 },
-      { name: "Feature 5", description: "Description pending", text: "Example text here", lockedTokenIdx: 3, hoveredSourceTokenIdx: 1 }
+      {
+        name: "Download/Buy Kindle",
+        description: "Words like 'download' massively boost 'Kindle', academic math terms (algebras, cohomology)",
+        text: "You can download this book on Kindle",
+        lockedTokenIdx: 2,
+        hoveredSourceTokenIdx: 1
+      },
+      {
+        name: "Cyrillic Character Feature",
+        description: "Same triggers as Kindle also predict Cyrillic capitals (О, И, Т, К)",
+        text: "The file is ready for download in Russian",
+        lockedTokenIdx: 5,
+        hoveredSourceTokenIdx: 4
+      },
+      {
+        name: "Modal Verb → Medical",
+        description: "Modal verbs like 'ought', 'could' predict medical terms: malignancy, epidermis, coronary",
+        text: "This is a procedure that we ought to consider",
+        lockedTokenIdx: 6,
+        hoveredSourceTokenIdx: 5
+      },
+      {
+        name: "Technical Acronym Prediction",
+        description: "Prepositions after technical context predict acronyms: LS, CFG, AG, NL, PI",
+        text: "This packet structure comprises data for transmission",
+        lockedTokenIdx: 5,
+        hoveredSourceTokenIdx: 4
+      },
+      {
+        name: "Word Completion (conspiracy)",
+        description: "Simple prefix completion - 'cons' → 'piracy', 'piring'",
+        text: "He was accused of cons piracy charges",
+        lockedTokenIdx: 4,
+        hoveredSourceTokenIdx: 3
+      }
     ]
   },
   {
     headId: 5,
     headName: "Head 0:5",
     features: [
-      { name: "Feature 1", description: "Description pending", text: "Example text here", lockedTokenIdx: 3, hoveredSourceTokenIdx: 1 },
-      { name: "Feature 2", description: "Description pending", text: "Example text here", lockedTokenIdx: 3, hoveredSourceTokenIdx: 1 },
-      { name: "Feature 3", description: "Description pending", text: "Example text here", lockedTokenIdx: 3, hoveredSourceTokenIdx: 1 },
-      { name: "Feature 4", description: "Description pending", text: "Example text here", lockedTokenIdx: 3, hoveredSourceTokenIdx: 1 },
-      { name: "Feature 5", description: "Description pending", text: "Example text here", lockedTokenIdx: 3, hoveredSourceTokenIdx: 1 }
+      {
+        name: "Proper Noun (Last Names)",
+        description: "First name prefixes predict completions - 'McC' → Cain, arthy; 'Sh' → ansen",
+        text: "The next person to speak was Senator McC ain",
+        lockedTokenIdx: 7,
+        hoveredSourceTokenIdx: 6
+      },
+      {
+        name: "Verb Prefix Completion",
+        description: "Common verb prefixes completed - 'dis' → cuss, cover; 'con' → sider, firm",
+        text: "We must dis cuss this matter urgently",
+        lockedTokenIdx: 2,
+        hoveredSourceTokenIdx: 1
+      },
+      {
+        name: "Patent/Technical Language",
+        description: "'embodiment' context predicts past participles: configured, implemented, generated",
+        text: "In another embodiment the device may be configured",
+        lockedTokenIdx: 7,
+        hoveredSourceTokenIdx: 6
+      },
+      {
+        name: "Place/Brand Completion",
+        description: "Geographic prefixes completed - 'Mont' → real, ana; 'Mal' → dives, aysia",
+        text: "I am planning a trip to Mont real",
+        lockedTokenIdx: 6,
+        hoveredSourceTokenIdx: 5
+      },
+      {
+        name: "Adjective/Noun Prefix",
+        description: "General prefix completion - 'En' → chanting, gaging; 'fl' → ower, oating",
+        text: "It cast an En chanting spell on",
+        lockedTokenIdx: 3,
+        hoveredSourceTokenIdx: 2
+      }
     ]
   },
   {
@@ -182,27 +271,81 @@ const HEAD_FEATURES: HeadData[] = [
     headName: "Head 0:6",
     features: [
       {
-        name: "Bracket Matching",
-        description: "Matches opening and closing brackets/parentheses",
-        text: "A model ( like this one ) works",
-        lockedTokenIdx: 6,
-        hoveredSourceTokenIdx: 2
+        name: "Parenthesis Stacking/Closing",
+        description: "Opening '(' massively predicts stacks of closing parentheses: ))))), )))',  ').)'",
+        text: "This is a very complex and deeply nested ( ( structure",
+        lockedTokenIdx: 8,
+        hoveredSourceTokenIdx: 7
       },
-      { name: "Feature 2", description: "Description pending", text: "Example text here", lockedTokenIdx: 3, hoveredSourceTokenIdx: 1 },
-      { name: "Feature 3", description: "Description pending", text: "Example text here", lockedTokenIdx: 3, hoveredSourceTokenIdx: 1 },
-      { name: "Feature 4", description: "Description pending", text: "Example text here", lockedTokenIdx: 3, hoveredSourceTokenIdx: 1 },
-      { name: "Feature 5", description: "Description pending", text: "Example text here", lockedTokenIdx: 3, hoveredSourceTokenIdx: 1 }
+      {
+        name: "Bracket Stacking/Closing",
+        description: "Opening '[' predicts stacks of closing brackets: ]], ]],  ')].'",
+        text: "The data is in a list [ 1 2 [ 3",
+        lockedTokenIdx: 8,
+        hoveredSourceTokenIdx: 7
+      },
+      {
+        name: "End of Block Newlines",
+        description: "Closing ')' or ']' predicts newlines to start new paragraphs",
+        text: "He bought all the items on the list ) and",
+        lockedTokenIdx: 8,
+        hoveredSourceTokenIdx: 7
+      },
+      {
+        name: "Code Block (Braces)",
+        description: "Opening '{' predicts closing braces for JSON/code: )}}, )}),  )},",
+        text: "The JSON object starts with data = { items",
+        lockedTokenIdx: 7,
+        hoveredSourceTokenIdx: 6
+      },
+      {
+        name: "Code Logic (if/for)",
+        description: "Code keywords predict syntax completions - 'for' → ]:, enumerate; 'if' → else, not",
+        text: "The code loops for each item in the list",
+        lockedTokenIdx: 3,
+        hoveredSourceTokenIdx: 2
+      }
     ]
   },
   {
     headId: 7,
     headName: "Head 0:7",
     features: [
-      { name: "Feature 1", description: "Description pending", text: "Example text here", lockedTokenIdx: 3, hoveredSourceTokenIdx: 1 },
-      { name: "Feature 2", description: "Description pending", text: "Example text here", lockedTokenIdx: 3, hoveredSourceTokenIdx: 1 },
-      { name: "Feature 3", description: "Description pending", text: "Example text here", lockedTokenIdx: 3, hoveredSourceTokenIdx: 1 },
-      { name: "Feature 4", description: "Description pending", text: "Example text here", lockedTokenIdx: 3, hoveredSourceTokenIdx: 1 },
-      { name: "Feature 5", description: "Description pending", text: "Example text here", lockedTokenIdx: 3, hoveredSourceTokenIdx: 1 }
+      {
+        name: "Geographical Entity Association",
+        description: "Cardinal directions (East, West, North) boost place fragments: 'hire' (Yorkshire), 'wikipedia'",
+        text: "He was traveling from the North to visit",
+        lockedTokenIdx: 5,
+        hoveredSourceTokenIdx: 4
+      },
+      {
+        name: "American [Organization]",
+        description: "'American' strongly predicts organization names: Association, Society",
+        text: "She is a member of the American Psychological Association",
+        lockedTokenIdx: 6,
+        hoveredSourceTokenIdx: 5
+      },
+      {
+        name: "Phrase: 'has [abstract noun]'",
+        description: "'has' completes with abstract nouns: origins, roots, implications, drawbacks",
+        text: "This decision has serious implications for the future",
+        lockedTokenIdx: 2,
+        hoveredSourceTokenIdx: 1
+      },
+      {
+        name: "Phrase: 'be [state/location]'",
+        description: "'be' predicts states of being: forefront, insofar",
+        text: "Our company must be at the forefront of",
+        lockedTokenIdx: 3,
+        hoveredSourceTokenIdx: 2
+      },
+      {
+        name: "Time Collocation",
+        description: "'time' boosts associated concepts: effort, patience, sleep",
+        text: "This project will require a great deal of time and",
+        lockedTokenIdx: 9,
+        hoveredSourceTokenIdx: 8
+      }
     ]
   }
 ];
