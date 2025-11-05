@@ -37,12 +37,22 @@ const EXAMPLES: Example[] = [
   },
 ];
 
-export function AttentionCircuitWidget() {
+type Panel = "qk" | "ov";
+
+export function AttentionCircuitWidget({
+  panels = ["qk", "ov"],
+}: {
+  panels?: Panel[];
+} = {}) {
   const [activeTab, setActiveTab] = useState(0);
   const [text, setText] = useState(EXAMPLES[0].text);
   const [hoveredToken, setHoveredToken] = useState<number | null>(EXAMPLES[0].lockedTokenIdx);
   const [lockedToken, setLockedToken] = useState<number | null>(EXAMPLES[0].lockedTokenIdx);
   const [hoveredSourceToken, setHoveredSourceToken] = useState<number | null>(EXAMPLES[0].hoveredSourceTokenIdx);
+
+  // Determine what data we need based on panels
+  const needsQKData = panels.includes("qk");
+  const needsOVData = panels.includes("ov");
 
   // Real API data
   const [realTokens, setRealTokens] = useState<Array<{ text: string; id: number }> | null>(null);
@@ -65,6 +75,7 @@ export function AttentionCircuitWidget() {
             model_name: "t1",
             layers: [0],
             heads: [0, 2, 6],  // Tab 0: head 6 (Syntax), Tab 1: head 0 (Abstract), Tab 2: head 2 (Semantic Fact)
+            compute_ov: needsOVData,  // Only compute OV if needed
           }),
         });
 
@@ -72,8 +83,8 @@ export function AttentionCircuitWidget() {
 
         const data: AttentionPatternsResponse = await response.json();
         setRealTokens(data.tokens);
-        setRealAttention(data.attention);
-        setRealOVPredictions(data.ov_predictions || null);
+        setRealAttention(needsQKData ? data.attention : null);
+        setRealOVPredictions(needsOVData ? (data.ov_predictions || null) : null);
       } catch (err) {
         console.error("Error fetching attention:", err);
         setRealTokens(null);
@@ -84,7 +95,7 @@ export function AttentionCircuitWidget() {
 
     const timer = setTimeout(fetchAttention, 300);
     return () => clearTimeout(timer);
-  }, [text]);
+  }, [text, needsQKData, needsOVData]);
 
   // Use real tokens if available, otherwise split text
   const allTokens = realTokens ? realTokens.map(t => t.text) : text.split(/\s+/).filter(t => t.length > 0);
@@ -291,29 +302,39 @@ export function AttentionCircuitWidget() {
           disableFirstToken={false}
         />
         <p className="text-xs text-gray-500 mt-2">
-          Click a token to lock, then hover previous tokens to see OV contributions
+          {needsQKData && needsOVData
+            ? "Click a token to lock, then hover previous tokens to see OV contributions"
+            : needsOVData
+            ? "Click a token to lock, then hover previous tokens to see OV contributions"
+            : "Click a token to lock and see its attention pattern"}
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-        {/* Left: QK Circuit (Affinity Matrix) */}
-        <QKCircuitWidget
-          tokens={tokens}
-          affinityMatrix={affinityMatrix}
-          hoveredToken={hoveredToken}
-          hoveredSourceToken={hoveredSourceToken}
-          onMatrixCellHover={handleMatrixCellHover}
-          onMatrixCellLeave={handleMatrixCellLeave}
-        />
+      <div className={`grid gap-8 items-start ${
+        needsQKData && needsOVData ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1'
+      }`}>
+        {/* QK Circuit (Affinity Matrix) */}
+        {needsQKData && (
+          <QKCircuitWidget
+            tokens={tokens}
+            affinityMatrix={affinityMatrix}
+            hoveredToken={hoveredToken}
+            hoveredSourceToken={hoveredSourceToken}
+            onMatrixCellHover={handleMatrixCellHover}
+            onMatrixCellLeave={handleMatrixCellLeave}
+          />
+        )}
 
-        {/* Right: OV Circuit */}
-        <OVCircuitWidget
-          tokens={tokens}
-          ovLogits={ovLogits}
-          hoveredSourceToken={hoveredSourceToken}
-          hoveredToken={hoveredToken}
-          lockedToken={lockedToken}
-        />
+        {/* OV Circuit */}
+        {needsOVData && (
+          <OVCircuitWidget
+            tokens={tokens}
+            ovLogits={ovLogits}
+            hoveredSourceToken={hoveredSourceToken}
+            hoveredToken={hoveredToken}
+            lockedToken={lockedToken}
+          />
+        )}
       </div>
     </div>
   );

@@ -4,120 +4,9 @@ import { TokenStrip } from "../components/TokenStrip";
 import { AttentionCircuitWidget } from "../components/AttentionCircuitWidget";
 import { API_URL } from "../config";
 import type { AttentionPatternsResponse, TokenInfo } from "../types";
+import NoLayerFigure from "../components/NoLayerFigure";
 
 export function Explainer() {
-  const [activeToken, setActiveToken] = useState<number | null>(3); // Default to "else"
-  const [lockedToken, setLockedToken] = useState<number | null>(null);
-
-  // State for real attention patterns
-  const [inputText, setInputText] = useState<string>("if true then else");
-  const [debouncedText, setDebouncedText] = useState<string>("if true then else");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [realTokens, setRealTokens] = useState<TokenInfo[] | null>(null);
-  const [realAttention, setRealAttention] = useState<number[][][][] | null>(null);
-
-  // Debounce the input text
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedText(inputText);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [inputText]);
-
-  // Fetch attention patterns when text changes
-  useEffect(() => {
-    if (!debouncedText.trim()) {
-      setRealTokens(null);
-      setRealAttention(null);
-      setError(null);
-      return;
-    }
-
-    const fetchAttention = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const response = await fetch(`${API_URL}/api/attention-patterns`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            text: debouncedText,
-            model_name: "t1",
-          }),
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.detail || "Failed to fetch attention patterns");
-        }
-
-        const data: AttentionPatternsResponse = await response.json();
-        setRealTokens(data.tokens);
-        setRealAttention(data.attention);
-      } catch (err) {
-        console.error("Error fetching attention patterns:", err);
-        setError(err instanceof Error ? err.message : "Failed to load attention patterns");
-        setRealTokens(null);
-        setRealAttention(null);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchAttention();
-  }, [debouncedText]);
-
-  // Use real tokens if available, otherwise fall back to example
-  const tokens = realTokens || [
-    { text: "if", id: 0 },
-    { text: " true", id: 1 },
-    { text: " then", id: 2 },
-    { text: " else", id: 3 },
-  ];
-
-  // Get attention data for the currently active token
-  const attentionData = useMemo(() => {
-    if (realAttention) {
-      // Use real attention data from API
-      const currentTokenIdx = lockedToken !== null ? lockedToken : (activeToken !== null ? activeToken : 0);
-      // realAttention is [position][layer][head][src_position]
-      // We need position-1 because attention starts at position 1 (no attention for first token)
-      const positionIdx = Math.max(0, currentTokenIdx - 1);
-
-      if (positionIdx >= 0 && positionIdx < realAttention.length) {
-        const pattern = realAttention[positionIdx];
-        return {
-          t1: pattern,
-          t2: pattern,
-        };
-      }
-    }
-
-    // Fall back to example data
-    const attentionPatterns = [
-      [1.0, 0.0, 0.0, 0.0],
-      [0.4, 0.6, 0.0, 0.0],
-      [0.3, 0.3, 0.4, 0.0],
-      [0.75, 0.08, 0.08, 0.09],
-    ];
-    const currentTokenIdx = lockedToken !== null ? lockedToken : (activeToken !== null ? activeToken : 3);
-    const pattern = attentionPatterns[currentTokenIdx] || [0, 0, 0, 0];
-
-    return {
-      t1: [[pattern]],
-      t2: [[pattern]],
-    };
-  }, [realAttention, lockedToken, activeToken]);
-
-  const handleTokenClick = (idx: number) => {
-    if (lockedToken === idx) {
-      setLockedToken(null);
-    } else {
-      setLockedToken(idx);
-      setActiveToken(idx);
-    }
-  };
 
   return (
     <article className="min-h-screen bg-white text-neutral-900 antialiased">
@@ -125,9 +14,6 @@ export function Explainer() {
       <header className="mx-auto max-w-3xl px-6 pt-14 pb-12">
         <p className="text-sm tracking-widest uppercase text-neutral-500">Interactive Notes</p>
         <h1 className="mt-2 font-serif text-5xl leading-tight">Induction Heads</h1>
-        {/* <p className="mt-3 text-base text-neutral-600">
-          <a href="https://transformer-circuits.pub/2021/framework/index.html" className="underline">A Mathematical Framework for Transformer Circuits</a> walkthThe beginning of mechanistic interpretability
-        </p> */}
       </header>
 
       {/* Main content */}
@@ -147,92 +33,7 @@ export function Explainer() {
            Attempt #1: what if you take out <em>all</em> the layers? Well, for one, it's not a transformer anymore: it's the on-ramp and off-ramp with nothing in between.
           </p>
 
-          <figure className="my-12 mx-auto max-w-2xl">
-            <div className="grid md:grid-cols-2 gap-8 items-center">
-              {/* Full Transformer */}
-              <div className="flex flex-col items-center">
-                {/* <div className="text-sm font-medium text-neutral-600 mb-4">Full Transformer</div> */}
-                <svg viewBox="0 0 200 320" className="w-full max-w-[200px]">
-                  {/* Token input */}
-                  <rect x="60" y="10" width="80" height="30" rx="4" fill="#f5f5f5" stroke="#a3a3a3" strokeWidth="1.5" />
-                  <text x="100" y="30" textAnchor="middle" fontSize="12" fill="#525252" fontFamily="system-ui">token</text>
-
-                  {/* Embedding */}
-                  <line x1="100" y1="40" x2="100" y2="55" stroke="#a3a3a3" strokeWidth="1.5" />
-                  <rect x="50" y="55" width="100" height="35" rx="6" fill="#e5e5e5" stroke="#737373" strokeWidth="2" />
-                  <text x="100" y="77" textAnchor="middle" fontSize="13" fontWeight="600" fill="#262626" fontFamily="system-ui">Embed</text>
-
-                  {/* Transformer Blocks */}
-                  <line x1="100" y1="90" x2="100" y2="105" stroke="#a3a3a3" strokeWidth="1.5"  />
-                  <rect x="50" y="105" width="100" height="30" rx="6" fill="#dbeafe" stroke="#3b82f6" strokeWidth="1.5" />
-                  <text x="100" y="125" textAnchor="middle" fontSize="11" fill="#1e40af" fontFamily="system-ui">Block 1</text>
-
-                  <line x1="100" y1="135" x2="100" y2="150" stroke="#a3a3a3" strokeWidth="1.5"  />
-                  <rect x="50" y="150" width="100" height="30" rx="6" fill="#dbeafe" stroke="#3b82f6" strokeWidth="1.5" />
-                  <text x="100" y="170" textAnchor="middle" fontSize="11" fill="#1e40af" fontFamily="system-ui">Block 2</text>
-
-                  {/* Ellipsis for more blocks */}
-                  <text x="100" y="200" textAnchor="middle" fontSize="20" fill="#737373" fontFamily="system-ui">⋮</text>
-
-                  <rect x="50" y="210" width="100" height="30" rx="6" fill="#dbeafe" stroke="#3b82f6" strokeWidth="1.5" />
-                  <text x="100" y="230" textAnchor="middle" fontSize="11" fill="#1e40af" fontFamily="system-ui">Block N</text>
-
-                  {/* Unembedding */}
-                  <line x1="100" y1="240" x2="100" y2="255" stroke="#a3a3a3" strokeWidth="1.5" />
-                  <rect x="50" y="255" width="100" height="35" rx="6" fill="#e5e5e5" stroke="#737373" strokeWidth="2" />
-                  <text x="100" y="277" textAnchor="middle" fontSize="13" fontWeight="600" fill="#262626" fontFamily="system-ui">Unembed</text>
-
-                  {/* Output */}
-                  <line x1="100" y1="290" x2="100" y2="315" stroke="#a3a3a3" strokeWidth="1.5" markerEnd="url(#arrowhead)" />
-
-                  {/* Arrow marker definition */}
-                  <defs>
-                    <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
-                      <polygon points="0 0, 10 3, 0 6" fill="#a3a3a3" />
-                    </marker>
-                  </defs>
-                </svg>
-              </div>
-
-              {/* Collapsed (No Layers) */}
-              <div className="flex flex-col items-center">
-                {/* <div className="text-sm font-medium text-neutral-600 mb-4">No Layers</div> */}
-                <svg viewBox="0 0 200 320" className="w-full max-w-[200px]">
-                  {/* Token input */}
-                  <rect x="60" y="10" width="80" height="30" rx="4" fill="#f5f5f5" stroke="#a3a3a3" strokeWidth="1.5" />
-                  <text x="100" y="30" textAnchor="middle" fontSize="12" fill="#525252" fontFamily="system-ui">token</text>
-
-                  {/* Embedding */}
-                  <line x1="100" y1="40" x2="100" y2="55" stroke="#a3a3a3" strokeWidth="1.5" markerEnd="url(#arrowhead1)" />
-                  <rect x="50" y="55" width="100" height="35" rx="6" fill="#e5e5e5" stroke="#737373" strokeWidth="2" />
-                  <text x="100" y="77" textAnchor="middle" fontSize="13" fontWeight="600" fill="#262626" fontFamily="system-ui">Embed</text>
-
-                  {/* Ghosted blocks */}
-                  <line x1="100" y1="90" x2="100" y2="255" stroke="#d4d4d4" strokeWidth="1.5" strokeDasharray="4,4" />
-                  {/* <rect x="50" y="135" width="100" height="75" rx="6" fill="none" stroke="#d4d4d4" strokeWidth="1.5" strokeDasharray="4,4" /> */}
-                  {/* <text x="100" y="177" textAnchor="middle" fontSize="11" fill="#a3a3a3" fontStyle="italic" fontFamily="system-ui">removed</text> */}
-
-                  {/* Unembedding */}
-                  {/* <line x1="100" y1="240" x2="100" y2="255" stroke="#a3a3a3" strokeWidth="1.5"  /> */}
-                  <rect x="50" y="255" width="100" height="35" rx="6" fill="#e5e5e5" stroke="#737373" strokeWidth="2" />
-                  <text x="100" y="277" textAnchor="middle" fontSize="13" fontWeight="600" fill="#262626" fontFamily="system-ui">Unembed</text>
-
-                  {/* Output */}
-                  <line x1="100" y1="290" x2="100" y2="315" stroke="#a3a3a3" strokeWidth="1.5" markerEnd="url(#arrowhead2)" />
-
-                  {/* Arrow marker definition */}
-                  <defs>
-                    <marker id="arrowhead2" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
-                      <polygon points="0 0, 10 3, 0 6" fill="#a3a3a3" />
-                    </marker>
-                  </defs>
-                </svg>
-              </div>
-            </div>
-            {/* <figcaption className="mt-4 text-sm text-neutral-600 text-center">
-              Removing all transformer blocks leaves just the embedding and unembedding matrices — essentially a learned bigram model.
-            </figcaption> */}
-          </figure>
+          <NoLayerFigure />
 
           <p className="text-lg leading-relaxed mt-6">
              The embedding matrix maps each token into latent space, and the unembedding matrix maps out a corresponding guess for the token to follow. 
@@ -244,8 +45,7 @@ export function Explainer() {
                   {/* Bigram Widget */}
         <div className="my-12">
           <CombinedAttentionWidget
-            initialText="My name is"
-            panels={["batch"]}
+            panels={["bigram"]}
           />
         </div>
         <p className="text-lg leading-relaxed mt-6">
@@ -265,18 +65,22 @@ export function Explainer() {
           </p>
 
           <p className="text-lg leading-relaxed mt-6">
-            With a <em>single</em> attention layer, we can now look at more than just the last token. Watch what happens when we compare bigram predictions (last token only) with attention-enhanced predictions (context-aware):
+            The bigram statistics (given X, what's Y?) are still basically the foundation of the model. But now we're able to bias those predictions given other tokens that came before. In certain situations, we can do much better. 
+            The second we use a word like "quarterback", we've provided a huge blinking signpost to the model that we're talking about football.
+            In this regime, it makes sense to dramatically boost of all manner of football and generally sports-related tokens.
           </p>
 
-          <CombinedAttentionWidget panels={["hover", "batch"]} />
+          <CombinedAttentionWidget panels={["l1", "bigram"]} />
 
           <p className="text-lg leading-relaxed mt-6">
-            How does this work? Under the hood, attention has two key components:
+          There are a lot of mental models for this, but here’s what I’m using right now: we build up an affinity matrix (also called the QK circuit) that tells us how much token X cares about any other token. We learn this over time as the network trains.
           </p>
 
           <p className="text-lg leading-relaxed mt-6">
             First, we build up an <em>affinity matrix</em> (also called the <strong>QK circuit</strong>) that tells us how much each token cares about every other token. This is learned during training.
           </p>
+
+          <AttentionCircuitWidget panels={["qk"]} />
 
           <p className="text-lg leading-relaxed mt-6">
             Second, we learn the <strong>OV circuit</strong>, which tells us: when we <em>do</em> attend to a token, how should that modulate our prediction for what comes next?
@@ -287,69 +91,6 @@ export function Explainer() {
           </p>
 
           <AttentionCircuitWidget />
-
-          <figure className="my-12">
-            <div className="rounded-2xl border border-neutral-200 bg-neutral-50/60 p-6 shadow-sm">
-              <h3 className="font-serif text-2xl mb-4">Attention Pattern Example</h3>
-
-              {/* Text input */}
-              <div className="mb-4">
-                <label className="block text-sm text-neutral-600 mb-2">
-                  Enter text to analyze attention patterns:
-                </label>
-                <input
-                  type="text"
-                  value={inputText}
-                  onChange={(e) => setInputText(e.target.value)}
-                  placeholder="Type some text..."
-                  className="w-full rounded-xl border border-neutral-300 bg-white px-4 py-2 font-mono text-sm shadow-inner outline-none focus:ring-2 focus:ring-neutral-800"
-                />
-                {loading && (
-                  <div className="mt-2 text-xs text-neutral-500 animate-pulse">
-                    Loading attention patterns...
-                  </div>
-                )}
-                {error && (
-                  <div className="mt-2 text-xs text-red-600">
-                    Error: {error}
-                  </div>
-                )}
-              </div>
-
-              {/* Instructions */}
-              <div className="mb-4">
-                <div className="text-sm text-neutral-600 mb-2">
-                  Click a token to see what it attends to (highlighted in red)
-                </div>
-                <div className="text-xs text-neutral-500 mb-3">
-                  Try clicking "else" - notice how it highlights "if" in red, showing the learned if...else pattern.
-                </div>
-              </div>
-
-              <div className="bg-white rounded-xl p-5 border border-neutral-200">
-                <TokenStrip
-                  tokens={tokens}
-                  active={lockedToken !== null ? lockedToken : activeToken}
-                  onHover={setActiveToken}
-                  onClick={handleTokenClick}
-                  locked={lockedToken}
-                  attentionData={attentionData}
-                  valueWeightedData={attentionData}
-                  headDeltasData={null}
-                  selectedModel="t1"
-                  selectedLayer={0}
-                  selectedHead={0}
-                  highlightMode="attention"
-                />
-              </div>
-
-              <figcaption className="mt-4 text-sm text-neutral-600">
-                This shows a single attention head that has learned the if...else→end pattern.
-                When you click "else" (token 3), it attends most strongly to "if" (token 0) with 75% attention weight.
-                This is the <strong>QK circuit</strong> in action - determining which previous tokens are relevant.
-              </figcaption>
-            </div>
-          </figure>
 
           <p className="text-lg leading-relaxed mt-6">
             In Ruby, you often see control patterns like:
