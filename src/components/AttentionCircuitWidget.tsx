@@ -98,8 +98,7 @@ export function AttentionCircuitWidget({
   }, [text, needsQKData, needsOVData]);
 
   // Use real tokens if available, otherwise split text
-  const allTokens = realTokens ? realTokens.map(t => t.text) : text.split(/\s+/).filter(t => t.length > 0);
-  const tokens = allTokens.slice(0, 10); // Only use first 10 tokens
+  const tokens = realTokens ? realTokens.map(t => t.text) : text.split(/\s+/).filter(t => t.length > 0);
 
   // Build affinity matrix from real attention or example data
   const affinityMatrix = useMemo(() => {

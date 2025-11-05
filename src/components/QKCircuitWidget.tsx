@@ -15,13 +15,36 @@ export function QKCircuitWidget({
   onMatrixCellHover,
   onMatrixCellLeave,
 }: QKCircuitWidgetProps) {
-  // Color scale from gray (0) to dark red-orange
+  // Find min and max values (excluding zeros) for proper color scaling
+  const nonZeroValues = affinityMatrix.flat().filter(v => v > 0);
+  const minValue = nonZeroValues.length > 0 ? Math.min(...nonZeroValues) : 0;
+  const maxValue = nonZeroValues.length > 0 ? Math.max(...nonZeroValues) : 1;
+
+  // Responsive sizing based on token count
+  const showLabels = tokens.length <= 10;
+  const cellSize = tokens.length <= 10 ? 32 : tokens.length <= 20 ? 20 : tokens.length <= 30 ? 14 : 10;
+  const fontSize = tokens.length <= 10 ? 9 : tokens.length <= 20 ? 7 : 6;
+  const threshold = tokens.length <= 10 ? 0.15 : tokens.length <= 20 ? 0.25 : 0.35;
+
+  // Color scale from light gray (min) to dark red-orange (max)
   const getColor = (value: number) => {
     if (value === 0) {
       return '#e5e7eb'; // gray-200 for zero/empty values
     }
-    const intensity = Math.floor(value * 255);
-    return `rgb(${255}, ${140 - intensity * 0.4}, ${100 - intensity * 0.3})`;
+
+    // Normalize value to 0-1 range based on actual data
+    const normalized = (value - minValue) / (maxValue - minValue);
+
+    // Create color gradient: very pale peach → dark red
+    // Use a power function to make the gradient more perceptually linear
+    const intensity = Math.pow(normalized, 0.7);
+
+    // Interpolate from very pale peach to dark red
+    const r = 255;
+    const g = Math.floor(240 - intensity * 200); // 240 → 40 (much lighter floor)
+    const b = Math.floor(220 - intensity * 200); // 220 → 20 (much lighter floor)
+
+    return `rgb(${r}, ${g}, ${b})`;
   };
 
   return (
@@ -32,16 +55,18 @@ export function QKCircuitWidget({
       <div className="p-4">
         <div className="flex justify-center">
           <table className="border-collapse">
-            <thead>
-              <tr>
-                <th className="w-10"></th>
-                {tokens.map((token, i) => (
-                  <th key={i} className="text-[10px] p-0.5 text-gray-600 font-normal">
-                    <div className="w-8 truncate text-center">{token}</div>
-                  </th>
-                ))}
-              </tr>
-            </thead>
+            {showLabels && (
+              <thead>
+                <tr>
+                  <th className="w-10"></th>
+                  {tokens.map((token, i) => (
+                    <th key={i} className="text-[10px] p-0.5 text-gray-600 font-normal">
+                      <div className="w-8 truncate text-center">{token}</div>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+            )}
             <tbody>
               {tokens.map((rowToken, i) => {
                 const isRowHighlighted = hoveredToken === i;
@@ -49,9 +74,11 @@ export function QKCircuitWidget({
 
                 return (
                   <tr key={i} className={shouldDim ? "opacity-30" : "opacity-100 transition-opacity"}>
-                    <td className="text-[10px] p-0.5 text-gray-600 font-medium">
-                      <div className="w-10 truncate text-right pr-1">{rowToken}</div>
-                    </td>
+                    {showLabels && (
+                      <td className="text-[10px] p-0.5 text-gray-600 font-medium">
+                        <div className="w-10 truncate text-right pr-1">{rowToken}</div>
+                      </td>
+                    )}
                     {tokens.map((_, j) => {
                       const isColHighlighted = hoveredSourceToken === j;
                       const isCellHighlighted = isRowHighlighted && isColHighlighted;
@@ -59,18 +86,23 @@ export function QKCircuitWidget({
                       return (
                         <td key={j} className="p-0">
                           <div
-                            className={`w-8 h-8 border flex items-center justify-center text-[9px] font-mono cursor-pointer transition-all ${
+                            className={`border flex items-center justify-center font-mono cursor-pointer transition-all ${
                               isCellHighlighted
                                 ? "border-blue-500 border-2 ring-2 ring-blue-200"
                                 : isRowHighlighted || isColHighlighted
                                 ? "border-gray-300"
                                 : "border-gray-100"
                             }`}
-                            style={{ backgroundColor: getColor(affinityMatrix[i][j]) }}
+                            style={{
+                              backgroundColor: getColor(affinityMatrix[i][j]),
+                              width: `${cellSize}px`,
+                              height: `${cellSize}px`,
+                              fontSize: `${fontSize}px`
+                            }}
                             onMouseEnter={() => onMatrixCellHover(i, j)}
                             onMouseLeave={onMatrixCellLeave}
                           >
-                            {affinityMatrix[i][j] > 0.15 && (
+                            {affinityMatrix[i][j] > threshold && (
                               <span className="text-white drop-shadow">
                                 {(affinityMatrix[i][j] * 100).toFixed(0)}
                               </span>
