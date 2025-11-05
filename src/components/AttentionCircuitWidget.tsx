@@ -287,49 +287,32 @@ export function AttentionCircuitWidget({
         </div>
       </div>
 
-      {/* Token Strip at top */}
-      <div className="mb-8 bg-white p-4 rounded-lg border border-gray-200">
-        <TokenStrip
-          tokens={tokenStripData}
-          active={lockedToken !== null ? lockedToken : hoveredToken}
-          onHover={handleTokenHover}
-          onClick={handleTokenClick}
-          locked={lockedToken}
-          attentionData={attentionData}
-          valueWeightedData={attentionData}
-          headDeltasData={null}
-          selectedModel="t1"
-          selectedLayer={0}
-          selectedHead={0}
-          highlightMode="attention"
-          disableFirstToken={false}
-        />
-        <p className="text-xs text-gray-500 mt-2">
-          {needsQKData && needsOVData
-            ? "Click a token to lock, then hover previous tokens to see OV contributions"
-            : needsOVData
-            ? "Click a token to lock, then hover previous tokens to see OV contributions"
-            : "Click a token to lock and see its attention pattern"}
-        </p>
-      </div>
+      {/* OV-only mode: horizontal layout with token strip on left */}
+      {needsOVData && !needsQKData ? (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+          {/* Left: Token Strip */}
+          <div className="bg-white p-4 rounded-lg border border-gray-200">
+            <TokenStrip
+              tokens={tokenStripData}
+              active={lockedToken !== null ? lockedToken : hoveredToken}
+              onHover={handleTokenHover}
+              onClick={handleTokenClick}
+              locked={lockedToken}
+              attentionData={attentionData}
+              valueWeightedData={attentionData}
+              headDeltasData={null}
+              selectedModel="t1"
+              selectedLayer={0}
+              selectedHead={0}
+              highlightMode="attention"
+              disableFirstToken={false}
+            />
+            <p className="text-xs text-gray-500 mt-2">
+              Click a token to lock, then hover previous tokens to see OV contributions
+            </p>
+          </div>
 
-      <div className={`grid gap-8 items-start ${
-        needsQKData && needsOVData ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1'
-      }`}>
-        {/* QK Circuit (Affinity Matrix) */}
-        {needsQKData && (
-          <QKCircuitWidget
-            tokens={tokens}
-            affinityMatrix={affinityMatrix}
-            hoveredToken={hoveredToken}
-            hoveredSourceToken={hoveredSourceToken}
-            onMatrixCellHover={handleMatrixCellHover}
-            onMatrixCellLeave={handleMatrixCellLeave}
-          />
-        )}
-
-        {/* OV Circuit */}
-        {needsOVData && (
+          {/* Right: OV Circuit */}
           <OVCircuitWidget
             tokens={tokens}
             ovLogits={ovLogits}
@@ -337,8 +320,63 @@ export function AttentionCircuitWidget({
             hoveredToken={hoveredToken}
             lockedToken={lockedToken}
           />
-        )}
-      </div>
+        </div>
+      ) : (
+        <>
+          {/* Standard layout: Token Strip at top */}
+          <div className="mb-8 bg-white p-4 rounded-lg border border-gray-200">
+            <TokenStrip
+              tokens={tokenStripData}
+              active={lockedToken !== null ? lockedToken : hoveredToken}
+              onHover={handleTokenHover}
+              onClick={handleTokenClick}
+              locked={lockedToken}
+              attentionData={attentionData}
+              valueWeightedData={attentionData}
+              headDeltasData={null}
+              selectedModel="t1"
+              selectedLayer={0}
+              selectedHead={0}
+              highlightMode="attention"
+              disableFirstToken={false}
+            />
+            <p className="text-xs text-gray-500 mt-2">
+              {needsQKData && needsOVData
+                ? "Click a token to lock, then hover previous tokens to see OV contributions"
+                : needsOVData
+                ? "Click a token to lock, then hover previous tokens to see OV contributions"
+                : "Click a token to lock and see its attention pattern"}
+            </p>
+          </div>
+
+          <div className={`grid gap-8 items-start ${
+            needsQKData && needsOVData ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1'
+          }`}>
+            {/* QK Circuit (Affinity Matrix) */}
+            {needsQKData && (
+              <QKCircuitWidget
+                tokens={tokens}
+                affinityMatrix={affinityMatrix}
+                hoveredToken={hoveredToken}
+                hoveredSourceToken={hoveredSourceToken}
+                onMatrixCellHover={handleMatrixCellHover}
+                onMatrixCellLeave={handleMatrixCellLeave}
+              />
+            )}
+
+            {/* OV Circuit */}
+            {needsOVData && (
+              <OVCircuitWidget
+                tokens={tokens}
+                ovLogits={ovLogits}
+                hoveredSourceToken={hoveredSourceToken}
+                hoveredToken={hoveredToken}
+                lockedToken={lockedToken}
+              />
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 }

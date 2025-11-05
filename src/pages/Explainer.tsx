@@ -93,7 +93,10 @@ export function Explainer() {
             Let's break down these two circuits in detail:
           </p>
 
-          <AttentionCircuitWidget panels={["ov"]} />
+          <AttentionCircuitWidget
+            panels={["ov"]}
+            initialText="The philosopher argues that sense determines truth"
+          />
 
           <p className="text-lg leading-relaxed mt-6">
             In Ruby, you often see control patterns like:
