@@ -568,51 +568,103 @@ export function AttentionCircuitWidget({
 
   return (
     <div className="my-12 -mx-[25%] p-8 bg-gray-50 rounded-lg border border-gray-200">
-      {/* Head tabs and feature list - only show if no initialText provided */}
+      {/* Head diagram and feature list - only show if no initialText provided */}
       {!initialText && (
-        <>
-          {/* Head selector tabs */}
-          <div className="mb-4 flex justify-center gap-1">
-            {HEAD_FEATURES.map((head) => (
-              <button
-                key={head.headId}
-                onClick={() => handleHeadChange(head.headId)}
-                className={`px-3 py-2 text-xs font-medium transition-colors rounded ${
-                  selectedHead === head.headId
-                    ? "bg-black text-white"
-                    : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-100"
-                }`}
-              >
-                {head.headName}
-              </button>
-            ))}
-          </div>
-
-          {/* Feature list for selected head */}
-          <div className="mb-6 max-w-4xl mx-auto">
-            <div className="bg-white rounded-lg border border-gray-200 p-4">
-              <h4 className="text-sm font-semibold text-gray-700 mb-3">
-                Features of {currentHead.headName}:
-              </h4>
-              <div className="space-y-2">
-                {currentHead.features.map((feature, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => handleFeatureChange(idx)}
-                    className={`w-full text-left px-3 py-2 rounded text-sm transition-colors ${
-                      selectedFeature === idx
-                        ? "bg-blue-50 border-l-4 border-blue-500"
-                        : "hover:bg-gray-50 border-l-4 border-transparent"
-                    }`}
-                  >
-                    <div className="font-medium text-gray-900">{feature.name}</div>
-                    <div className="text-xs text-gray-600 mt-0.5">{feature.description}</div>
-                  </button>
-                ))}
-              </div>
+        <div className="mb-6 grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Left: Feature list for selected head */}
+          <div className="bg-white rounded-lg border border-gray-200 p-4">
+            <h4 className="text-sm font-semibold text-gray-700 mb-3">
+              Features of {currentHead.headName}:
+            </h4>
+            <div className="space-y-2">
+              {currentHead.features.map((feature, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => handleFeatureChange(idx)}
+                  className={`w-full text-left px-3 py-2 rounded text-sm transition-colors ${
+                    selectedFeature === idx
+                      ? "bg-blue-50 border-l-4 border-blue-500"
+                      : "hover:bg-gray-50 border-l-4 border-transparent"
+                  }`}
+                >
+                  <div className="font-medium text-gray-900">{feature.name}</div>
+                  <div className="text-xs text-gray-600 mt-0.5">{feature.description}</div>
+                </button>
+              ))}
             </div>
           </div>
-        </>
+
+          {/* Right: Head selector diagram */}
+          <div className="bg-white rounded-lg border border-gray-200 p-4 flex items-center justify-center">
+            <svg viewBox="0 0 300 400" className="w-full max-w-[300px]">
+              {/* Residual stream (vertical line through center) */}
+              <line x1="150" y1="20" x2="150" y2="380" stroke="#a3a3a3" strokeWidth="3" />
+
+              {/* Input label */}
+              <text x="150" y="15" textAnchor="middle" fontSize="11" fill="#525252" fontFamily="system-ui" fontWeight="500">
+                Residual Stream
+              </text>
+
+              {/* Attention heads branching off */}
+              {HEAD_FEATURES.map((head, idx) => {
+                const isSelected = selectedHead === head.headId;
+                const y = 60 + idx * 42;
+                const side = idx % 2 === 0 ? 'left' : 'right';
+                const x = side === 'left' ? 40 : 260;
+                const lineX = side === 'left' ? 150 : 150;
+
+                return (
+                  <g key={head.headId}>
+                    {/* Branch line from residual stream to head */}
+                    <line
+                      x1="150"
+                      y1={y + 12}
+                      x2={side === 'left' ? 70 : 230}
+                      y2={y + 12}
+                      stroke={isSelected ? "#3b82f6" : "#d4d4d4"}
+                      strokeWidth={isSelected ? "2" : "1.5"}
+                    />
+
+                    {/* Head box */}
+                    <rect
+                      x={x}
+                      y={y}
+                      width="60"
+                      height="24"
+                      rx="4"
+                      fill={isSelected ? "#dbeafe" : "#f5f5f5"}
+                      stroke={isSelected ? "#3b82f6" : "#a3a3a3"}
+                      strokeWidth={isSelected ? "2" : "1.5"}
+                      className="cursor-pointer transition-all"
+                      onClick={() => handleHeadChange(head.headId)}
+                      style={{ cursor: 'pointer' }}
+                    />
+                    <text
+                      x={x + 30}
+                      y={y + 16}
+                      textAnchor="middle"
+                      fontSize="10"
+                      fill={isSelected ? "#1e40af" : "#525252"}
+                      fontFamily="system-ui"
+                      fontWeight={isSelected ? "600" : "400"}
+                      className="cursor-pointer pointer-events-none"
+                    >
+                      {head.headName}
+                    </text>
+                  </g>
+                );
+              })}
+
+              {/* Output arrow */}
+              <defs>
+                <marker id="stream-arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                  <polygon points="0 0, 10 3, 0 6" fill="#a3a3a3" />
+                </marker>
+              </defs>
+              <line x1="150" y1="370" x2="150" y2="390" stroke="#a3a3a3" strokeWidth="3" markerEnd="url(#stream-arrow)" />
+            </svg>
+          </div>
+        </div>
       )}
 
       {/* Text input */}
