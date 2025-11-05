@@ -187,101 +187,160 @@ export function EvolutionWidget() {
         </div>
       </div>
 
-      {/* Composition Diagram */}
+      {/* Visual Architecture */}
       <div className="mb-8 bg-white p-6 rounded-lg border border-gray-200">
         <h4 className="text-sm font-semibold text-gray-700 mb-4">
-          Q-Composition: Which L0 heads does each L1 head compose with?
+          Q-Composition: How Layer 1 heads rely on Layer 0 heads
         </h4>
 
-        <div className="space-y-6">
-          {/* Layer 1 Heads */}
-          {[0, 1, 2, 3, 4, 5, 6, 7].map((l1Head) => {
-            const l1Key = `L1H${l1Head}`;
-            const isSelectedInd = l1Key === selectedIndHead;
+        <div className="relative w-full bg-gray-50 border border-gray-200 rounded-lg overflow-hidden" style={{ height: "260px" }}>
+          <svg className="absolute inset-0 w-full h-full">
+            {/* Draw Q-composition connections */}
+            {[0, 1, 2, 3, 4, 5, 6, 7].map((l1Head) =>
+              [0, 1, 2, 3, 4, 5, 6, 7].map((l0Head) => {
+                const compKey = `L1H${l1Head}_L0H${l0Head}`;
+                const finalScore = data.final_composition[compKey] || 0;
+                if (finalScore <= 0.001) return null;
 
-            return (
-              <div key={l1Head} className="space-y-2">
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={() => setSelectedIndHead(l1Key)}
-                    className={`px-3 py-1 text-sm font-medium rounded transition-colors ${
-                      isSelectedInd
-                        ? "bg-blue-100 text-blue-900 border-2 border-blue-500"
-                        : "bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200"
+                // Calculate positions (Layer 0 top, Layer 1 bottom)
+                const totalWidth = 7 * 60; // 8 heads, 60px spacing
+                const l0X = l0Head * 60 - totalWidth / 2 + 240;
+                const l0Y = 60;
+                const l1X = l1Head * 60 - totalWidth / 2 + 240;
+                const l1Y = 180;
+
+                // Show connections emerging over training
+                // Use a simple linear emergence based on training progress
+                const trainingProgress = currentStepIdx / (data.steps.length - 1);
+                const normalizedScore = Math.max(0, finalScore / 0.05);
+                const intensity = Math.pow(normalizedScore, 2);
+
+                // Scale visibility by training progress
+                const emergenceOpacity = Math.min(trainingProgress * 1.2, 1) * intensity;
+                const opacity = Math.min(emergenceOpacity * 0.7, 0.7);
+                const strokeWidth = Math.max(0.5, intensity * 6);
+
+                // Highlight key circuit
+                const l0Key = `L0H${l0Head}`;
+                const l1Key = `L1H${l1Head}`;
+                const isKeyCircuit = l0Key === selectedPrevHead && l1Key === selectedIndHead;
+
+                return (
+                  <line
+                    key={`comp-${l1Head}-${l0Head}`}
+                    x1={l0X}
+                    y1={l0Y + 24}
+                    x2={l1X}
+                    y2={l1Y - 24}
+                    stroke={isKeyCircuit ? "#EC4899" : "#0066ff"}
+                    strokeWidth={isKeyCircuit ? strokeWidth + 2 : strokeWidth}
+                    opacity={isKeyCircuit ? Math.min(opacity + 0.3, 0.9) : opacity}
+                    strokeLinecap="round"
+                  />
+                );
+              })
+            )}
+          </svg>
+
+          {/* Layer 0 Heads */}
+          <div className="absolute left-0 top-0 w-full">
+            <div className="absolute left-5 top-11 text-xs font-semibold text-gray-600">
+              Layer 0
+            </div>
+            {[0, 1, 2, 3, 4, 5, 6, 7].map((head) => {
+              const totalWidth = 7 * 60;
+              const x = head * 60 - totalWidth / 2 + 240;
+              const y = 60;
+              const headKey = `L0H${head}`;
+              const isSelected = headKey === selectedPrevHead;
+
+              return (
+                <div
+                  key={`l0h${head}`}
+                  onClick={() => setSelectedPrevHead(headKey)}
+                  className="absolute cursor-pointer transition-all"
+                  style={{
+                    left: `${x - 24}px`,
+                    top: `${y - 24}px`,
+                    width: "48px",
+                    height: "48px",
+                  }}
+                  title={`L0H${head} - prev_tok: ${(data.heads[headKey].prev_tok[currentStepIdx] * 100).toFixed(0)}%`}
+                >
+                  <div
+                    className={`w-full h-full rounded-full flex items-center justify-center text-xs font-semibold transition-all ${
+                      isSelected
+                        ? "border-2 text-white shadow-lg"
+                        : "border border-gray-300 bg-white text-gray-900 hover:border-gray-400"
                     }`}
                     style={
-                      isSelectedInd
-                        ? { borderColor: HEAD_COLORS[l1Head] }
+                      isSelected
+                        ? {
+                            backgroundColor: HEAD_COLORS[head],
+                            borderColor: HEAD_COLORS[head],
+                          }
                         : undefined
                     }
                   >
-                    L1H{l1Head}
-                  </button>
-
-                  {/* Composition bars for each L0 head */}
-                  <div className="flex-1 flex gap-1">
-                    {[0, 1, 2, 3, 4, 5, 6, 7].map((l0Head) => {
-                      const l0Key = `L0H${l0Head}`;
-                      const compKey = `L1H${l1Head}_L0H${l0Head}`;
-                      const finalComp = data.final_composition[compKey] || 0;
-                      const isSelectedPrev = l0Key === selectedPrevHead;
-                      const isKeyCircuit =
-                        isSelectedInd && isSelectedPrev;
-
-                      // For visualization, show final composition strength
-                      const barHeight = Math.max(2, finalComp * 400); // Scale up for visibility
-
-                      return (
-                        <div
-                          key={l0Head}
-                          className="flex-1 flex flex-col items-center gap-1"
-                        >
-                          <div
-                            className="w-full relative group cursor-pointer"
-                            style={{ height: "60px" }}
-                            onClick={() => setSelectedPrevHead(l0Key)}
-                          >
-                            <div
-                              className={`absolute bottom-0 w-full rounded-t transition-all ${
-                                isKeyCircuit
-                                  ? "opacity-100"
-                                  : "opacity-40 group-hover:opacity-70"
-                              }`}
-                              style={{
-                                height: `${barHeight}px`,
-                                backgroundColor: HEAD_COLORS[l0Head],
-                                border: isKeyCircuit ? `2px solid ${HEAD_COLORS[l0Head]}` : "none",
-                              }}
-                            />
-                          </div>
-                          <div
-                            className={`text-[10px] ${
-                              isSelectedPrev
-                                ? "font-bold"
-                                : "text-gray-500"
-                            }`}
-                          >
-                            H{l0Head}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  <div className="w-16 text-xs text-gray-500 text-right">
-                    {isSelectedInd
-                      ? `Ind: ${(indHeadMetrics.induction[currentStepIdx] * 100).toFixed(0)}%`
-                      : ""}
+                    {head}
                   </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
+
+          {/* Layer 1 Heads */}
+          <div className="absolute left-0 top-0 w-full">
+            <div className="absolute left-5 top-11" style={{ top: "171px" }}>
+              <span className="text-xs font-semibold text-gray-600">Layer 1</span>
+            </div>
+            {[0, 1, 2, 3, 4, 5, 6, 7].map((head) => {
+              const totalWidth = 7 * 60;
+              const x = head * 60 - totalWidth / 2 + 240;
+              const y = 180;
+              const headKey = `L1H${head}`;
+              const isSelected = headKey === selectedIndHead;
+
+              return (
+                <div
+                  key={`l1h${head}`}
+                  onClick={() => setSelectedIndHead(headKey)}
+                  className="absolute cursor-pointer transition-all"
+                  style={{
+                    left: `${x - 24}px`,
+                    top: `${y - 24}px`,
+                    width: "48px",
+                    height: "48px",
+                  }}
+                  title={`L1H${head} - induction: ${(data.heads[headKey].induction[currentStepIdx] * 100).toFixed(0)}%`}
+                >
+                  <div
+                    className={`w-full h-full rounded-full flex items-center justify-center text-xs font-semibold transition-all ${
+                      isSelected
+                        ? "border-2 text-white shadow-lg"
+                        : "border border-gray-300 bg-white text-gray-900 hover:border-gray-400"
+                    }`}
+                    style={
+                      isSelected
+                        ? {
+                            backgroundColor: HEAD_COLORS[head],
+                            borderColor: HEAD_COLORS[head],
+                          }
+                        : undefined
+                    }
+                  >
+                    {head}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
 
         <div className="mt-4 text-xs text-gray-500">
-          Layer 0 heads (bottom) → Layer 1 heads (left). Bar height shows final Q-composition strength.
-          Click to select heads. <strong>Key circuit: L0H3 → L1H6</strong> (Q-comp: {data.final_composition["L1H6_L0H3"]?.toFixed(3)})
+          Blue lines show Q-composition strength (how much L1 relies on L0).
+          <span className="text-pink-600 font-semibold"> Pink = selected circuit</span>.
+          <strong> Key circuit: L0H3 → L1H6</strong> (Q-comp: {data.final_composition["L1H6_L0H3"]?.toFixed(3)})
         </div>
       </div>
 
@@ -428,17 +487,6 @@ export function EvolutionWidget() {
             Current: <strong>{(currentInduction * 100).toFixed(1)}%</strong> →
             Final: <strong>{(data.final_head_scores[selectedIndHead].induction * 100).toFixed(1)}%</strong>
           </div>
-        </div>
-      </div>
-
-      {/* Explanation */}
-      <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-        <div className="text-sm text-blue-900">
-          <strong>What you're seeing:</strong> Over {data.steps[data.steps.length - 1].toLocaleString()} training steps,
-          the model discovers induction circuits. The key circuit (L0H3 → L1H6) emerges as L0H3 learns to attend
-          to the previous token (reaching {(data.final_head_scores.L0H3.prev_tok * 100).toFixed(0)}%) and L1H6 learns
-          to use those tags for pattern completion (reaching {(data.final_head_scores.L1H6.induction * 100).toFixed(0)}%).
-          The Q-composition score of {data.final_composition.L1H6_L0H3.toFixed(3)} shows how strongly L1H6 relies on L0H3's output.
         </div>
       </div>
     </div>
