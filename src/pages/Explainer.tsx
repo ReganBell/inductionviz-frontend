@@ -93,7 +93,7 @@ export function Explainer() {
             Let's break down these two circuits in detail:
           </p>
 
-          <AttentionCircuitWidget />
+          <AttentionCircuitWidget panels={["ov"]} />
 
           <p className="text-lg leading-relaxed mt-6">
             In Ruby, you often see control patterns like:
