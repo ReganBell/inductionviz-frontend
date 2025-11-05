@@ -595,32 +595,30 @@ export function AttentionCircuitWidget({
           </div>
 
           {/* Right: Head selector diagram */}
-          <div className="bg-white rounded-lg border border-gray-200 p-4 flex items-center justify-center">
-            <svg viewBox="0 0 300 400" className="w-full max-w-[300px]">
-              {/* Residual stream (vertical line through center) */}
-              <line x1="150" y1="20" x2="150" y2="380" stroke="#a3a3a3" strokeWidth="3" />
+          <div className="bg-white rounded-lg border border-gray-200 p-4 flex flex-col items-center justify-center">
+            <div className="text-xs text-gray-600 mb-2">Residual Stream</div>
+            <svg viewBox="0 0 450 120" className="w-full">
+              {/* Horizontal residual stream */}
+              <line x1="10" y1="60" x2="440" y2="60" stroke="#a3a3a3" strokeWidth="3" />
 
-              {/* Input label */}
-              <text x="150" y="15" textAnchor="middle" fontSize="11" fill="#525252" fontFamily="system-ui" fontWeight="500">
-                Residual Stream
-              </text>
-
-              {/* Attention heads branching off */}
+              {/* Attention heads in a row */}
               {HEAD_FEATURES.map((head, idx) => {
                 const isSelected = selectedHead === head.headId;
-                const y = 60 + idx * 42;
-                const side = idx % 2 === 0 ? 'left' : 'right';
-                const x = side === 'left' ? 40 : 260;
-                const lineX = side === 'left' ? 150 : 150;
+                const x = 25 + idx * 52;
+                const y = 30;
 
                 return (
                   <g key={head.headId}>
-                    {/* Branch line from residual stream to head */}
-                    <line
-                      x1="150"
-                      y1={y + 12}
-                      x2={side === 'left' ? 70 : 230}
-                      y2={y + 12}
+                    {/* Curved connections from stream through head and back */}
+                    <path
+                      d={`M ${x + 20} 60 Q ${x + 20} ${y + 35} ${x + 20} ${y + 30}`}
+                      fill="none"
+                      stroke={isSelected ? "#3b82f6" : "#d4d4d4"}
+                      strokeWidth={isSelected ? "2" : "1.5"}
+                    />
+                    <path
+                      d={`M ${x + 20} ${y} Q ${x + 20} ${y - 5} ${x + 20} 60`}
+                      fill="none"
                       stroke={isSelected ? "#3b82f6" : "#d4d4d4"}
                       strokeWidth={isSelected ? "2" : "1.5"}
                     />
@@ -629,8 +627,8 @@ export function AttentionCircuitWidget({
                     <rect
                       x={x}
                       y={y}
-                      width="60"
-                      height="24"
+                      width="40"
+                      height="30"
                       rx="4"
                       fill={isSelected ? "#dbeafe" : "#f5f5f5"}
                       stroke={isSelected ? "#3b82f6" : "#a3a3a3"}
@@ -640,28 +638,28 @@ export function AttentionCircuitWidget({
                       style={{ cursor: 'pointer' }}
                     />
                     <text
-                      x={x + 30}
-                      y={y + 16}
+                      x={x + 20}
+                      y={y + 19}
                       textAnchor="middle"
-                      fontSize="10"
+                      fontSize="9"
                       fill={isSelected ? "#1e40af" : "#525252"}
                       fontFamily="system-ui"
                       fontWeight={isSelected ? "600" : "400"}
-                      className="cursor-pointer pointer-events-none"
+                      className="pointer-events-none"
                     >
-                      {head.headName}
+                      H{head.headId}
                     </text>
                   </g>
                 );
               })}
 
-              {/* Output arrow */}
+              {/* Arrow at end */}
               <defs>
                 <marker id="stream-arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
                   <polygon points="0 0, 10 3, 0 6" fill="#a3a3a3" />
                 </marker>
               </defs>
-              <line x1="150" y1="370" x2="150" y2="390" stroke="#a3a3a3" strokeWidth="3" markerEnd="url(#stream-arrow)" />
+              <line x1="430" y1="60" x2="445" y2="60" stroke="#a3a3a3" strokeWidth="3" markerEnd="url(#stream-arrow)" />
             </svg>
           </div>
         </div>
