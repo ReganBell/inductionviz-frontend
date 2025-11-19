@@ -1,4 +1,5 @@
 import { useState } from "react";
+import seedrandom from "seedrandom";
 
 interface TokenPoint {
   token: string;
@@ -65,33 +66,9 @@ function generateSyntheticData(): TokenPoint[] {
     },
   ];
 
-  const clusterDescriptions2d = [
-    "Sentence-initial & proper nouns",
-    "Prepositions & copula",
-    "Miscellaneous mid-frequency",
-    "Ultra-high frequency core",
-    "Infinitive marker & indefinite article",
-    "Auxiliary verbs & negation",
-    "Period & subordinators",
-    "Formatting & 1st/2nd person",
-    "Past tense & possessive determiners",
-    "Modal verbs & 3rd person",
-  ];
-
-  const clusterDescriptions3d = [
-    "Miscellaneous mid-frequency words",
-    "Prepositions & determiners",
-    "Miscellaneous mid-frequency",
-    "Ultra-high frequency core",
-    "Line breaks & quotes",
-    "Copula, auxiliaries & possessives",
-    "Period only",
-    "Pronouns & modal verbs",
-    "Common function words",
-    "Content words & numbers",
-  ];
 
   const points: TokenPoint[] = [];
+  const rng = seedrandom("999999"); // Seed for reproducible randomness
 
   clusterData.forEach((cluster, clusterIdx) => {
     cluster.tokens.forEach((token) => {
@@ -102,11 +79,11 @@ function generateSyntheticData(): TokenPoint[] {
       points.push({
         token,
         cluster: clusterIdx,
-        x2d: cluster.center2d[0] + (Math.random() - 0.5) * spread2d,
-        y2d: cluster.center2d[1] + (Math.random() - 0.5) * spread2d,
-        x3d: cluster.center3d[0] + (Math.random() - 0.5) * spread3d,
-        y3d: cluster.center3d[1] + (Math.random() - 0.5) * spread3d,
-        z3d: cluster.center3d[2] + (Math.random() - 0.5) * spread3d,
+        x2d: cluster.center2d[0] + (rng() - 0.5) * spread2d,
+        y2d: cluster.center2d[1] + (rng() - 0.5) * spread2d,
+        x3d: cluster.center3d[0] + (rng() - 0.5) * spread3d,
+        y3d: cluster.center3d[1] + (rng() - 0.5) * spread3d,
+        z3d: cluster.center3d[2] + (rng() - 0.5) * spread3d,
       });
     });
   });
@@ -140,25 +117,18 @@ const CLUSTER_DESCRIPTIONS_2D = [
   "Modal verbs & 3rd person",
 ];
 
-const CLUSTER_DESCRIPTIONS_3D = [
-  "Miscellaneous mid-frequency words",
-  "Prepositions & determiners",
-  "Miscellaneous mid-frequency",
-  "Ultra-high frequency core",
-  "Line breaks & quotes",
-  "Copula, auxiliaries & possessives",
-  "Period only",
-  "Pronouns & modal verbs",
-  "Common function words",
-  "Content words & numbers",
-];
-
 export function TokenEmbeddingDiagram() {
   const [hoveredPoint, setHoveredPoint] = useState<TokenPoint | null>(null);
   const [hoveredCluster, setHoveredCluster] = useState<number | null>(null);
   const [data] = useState(() => generateSyntheticData());
 
-  const clusterDescriptions = CLUSTER_DESCRIPTIONS_2D;
+  // Get actual tokens for each cluster
+  const clusterDescriptions = Array.from({ length: 10 }, (_, clusterIdx) => {
+    const tokensInCluster = data
+      .filter(p => p.cluster === clusterIdx)
+      .map(p => p.token === "\n" ? "\\n" : p.token);
+    return tokensInCluster.join(", ");
+  });
 
   // Calculate bounds for normalization
   const bounds2d = data.reduce(
@@ -187,30 +157,30 @@ export function TokenEmbeddingDiagram() {
   };
 
   return (
-    <figure className="my-8 p-6 bg-white rounded-lg border border-neutral-200">
+    <figure className="my-12 -mx-[25%] p-8 bg-gray-50 rounded-lg border border-gray-200">
       <div className="flex gap-6">
         {/* Left: Scatter plot */}
         <div className="flex-1">
           <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto">
         {/* Title */}
-        <text x={width / 2} y="20" textAnchor="middle" fontSize="14" fontWeight="600" fill="#0E1111" fontFamily="system-ui">
+        {/* <text x={width / 2} y="20" textAnchor="middle" fontSize="14" fontWeight="600" fill="#0E1111" fontFamily="system-ui">
           Token Embeddings in 2D Space (SVD)
         </text>
         <text x={width / 2} y="36" textAnchor="middle" fontSize="11" fill="#525252" fontFamily="system-ui">
           1000 Most Frequent Tokens, 10 K-Means Clusters
-        </text>
+        </text> */}
 
         {/* Axes */}
         <line x1={padding} y1={height - padding} x2={width - padding} y2={height - padding} stroke="#a3a3a3" strokeWidth="1.5" />
         <line x1={padding} y1={padding} x2={padding} y2={height - padding} stroke="#a3a3a3" strokeWidth="1.5" />
 
         {/* Axis labels */}
-        <text x={width / 2} y={height - 10} textAnchor="middle" fontSize="11" fill="#525252" fontFamily="system-ui">
+        {/* <text x={width / 2} y={height - 10} textAnchor="middle" fontSize="11" fill="#525252" fontFamily="system-ui">
           Dimension 1
         </text>
         <text x="15" y={height / 2} textAnchor="middle" fontSize="11" fill="#525252" fontFamily="system-ui" transform={`rotate(-90 15 ${height / 2})`}>
           Dimension 2
-        </text>
+        </text> */}
 
         {/* Grid lines */}
         {[0.25, 0.5, 0.75].map((frac) => (
@@ -324,7 +294,7 @@ export function TokenEmbeddingDiagram() {
         <div className="w-64 shrink-0">
           <h4 className="text-sm font-semibold text-neutral-700 mb-3">Clusters</h4>
           <div className="space-y-2">
-            {CLUSTER_DESCRIPTIONS_2D.map((description, idx) => {
+            {clusterDescriptions.map((description, idx) => {
               const tokenCount = data.filter(p => p.cluster === idx).length;
               const isHovered = hoveredCluster === idx;
 
@@ -349,7 +319,7 @@ export function TokenEmbeddingDiagram() {
                       {tokenCount}
                     </span>
                   </div>
-                  <p className="text-xs text-neutral-600 leading-snug">
+                  <p className="text-xs text-neutral-600 leading-snug font-mono">
                     {description}
                   </p>
                 </div>

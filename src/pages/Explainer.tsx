@@ -71,7 +71,7 @@ export function Explainer() {
           A traditional bigram model is built by literally counting every single time a particular token follows another.
           A <em>learned</em> bigram model is a little cooler than that, in part because of how small it is.
           Ever hear of "compression = intelligence?"
-          The full transition table for OpenTextWeb is ~10GB, but it's sparse (full of zeroes) because most tokens never follow each other. Our model is only <code className="bg-gray-100 rounded px-1.5 py-0.5">d_model</code> numbers (~1KB) and is almost as good.
+          The full transition table for GPT-2's token set is ~10GB, but it's sparse (full of zeroes) because most tokens never follow each other. Our model is only <code className="bg-gray-100 rounded px-1.5 py-0.5">d_model</code> numbers (~1KB) and is almost as good.
           That's semantic compression at work. In latent space, we can squash tokens together without too much loss of accuracy — and the visualization below shows exactly how.
         </p>
 
