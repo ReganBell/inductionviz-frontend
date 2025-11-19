@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { API_URL } from "../config";
+import { SubspaceTagVisualizer } from "./SubspaceTagVisualizer";
 
 interface TokenData {
   text: string;
@@ -10,7 +11,6 @@ export function PreviousTokenHeadDemo() {
   const [text] = useState("My name is Regan");
   const [tokens, setTokens] = useState<TokenData[]>([]);
   const [attention, setAttention] = useState<number[][][]>([]);
-  const [ovPredictions, setOVPredictions] = useState<any[][][]>([]);
   const [selectedToken, setSelectedToken] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -25,8 +25,6 @@ export function PreviousTokenHeadDemo() {
             model_name: "t2",
             layers: [1],
             heads: [4], // Previous token head
-            compute_ov: true,
-            normalize_ov: false,
           }),
         });
 
@@ -35,7 +33,6 @@ export function PreviousTokenHeadDemo() {
         const data = await response.json();
         setTokens(data.tokens);
         setAttention(data.attention || []);
-        setOVPredictions(data.ov_predictions || []);
         setLoading(false);
       } catch (err) {
         console.error("Error fetching data:", err);
@@ -62,11 +59,6 @@ export function PreviousTokenHeadDemo() {
   // Find which token is attended to most
   const attendedTokenIdx = attentionPattern
     ? attentionPattern.indexOf(Math.max(...attentionPattern))
-    : null;
-
-  // Get OV predictions for the attended token
-  const ovPreds = attendedTokenIdx !== null && ovPredictions[attendedTokenIdx]?.[0]?.[0]
-    ? ovPredictions[attendedTokenIdx][0][0]
     : null;
 
   return (
@@ -164,63 +156,34 @@ export function PreviousTokenHeadDemo() {
             </div>
           </div>
 
-          {/* Right: OV Circuit */}
+          {/* Right: Subspace Visualization */}
           <div className="bg-white p-4 rounded-lg border border-gray-200">
             <h4 className="text-sm font-semibold text-gray-700 mb-3">OV Circuit (The "Tag")</h4>
 
-            <div className="mb-4 text-sm text-gray-600">
-              When attending to <code className="bg-green-100 px-1 rounded font-mono">{tokens[attendedTokenIdx].text}</code>,
-              the OV circuit outputs this "tag" into the residual stream:
-            </div>
-
-            {ovPreds && (
-              <div className="space-y-1">
-                {ovPreds.slice(0, 8).map((pred: any, i: number) => {
-                  const maxLogit = Math.abs(ovPreds[0].logit);
-                  const width = maxLogit > 0 ? (Math.abs(pred.logit) / maxLogit) * 100 : 0;
-                  const isMatchingToken = pred.token === tokens[attendedTokenIdx].text;
-
-                  return (
-                    <div key={i} className="flex items-center gap-2">
-                      <div className="w-20 shrink-0 font-mono text-xs text-neutral-800 flex items-center gap-1">
-                        {pred.token}
-                        {isMatchingToken && (
-                          <span className="text-[10px] text-green-600">✓</span>
-                        )}
-                      </div>
-                      <div className="flex-1">
-                        <div className="h-1.5 rounded-sm bg-neutral-100">
-                          <div
-                            className={`h-1.5 rounded-sm ${isMatchingToken ? 'bg-green-400' : 'bg-blue-300'}`}
-                            style={{ width: `${width}%` }}
-                          />
-                        </div>
-                      </div>
-                      <div className="w-16 shrink-0 font-mono text-xs tabular-nums text-neutral-600">
-                        {pred.logit >= 0 ? "+" : ""}{pred.logit.toFixed(2)}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            <div className="mt-4 pt-4 border-t border-gray-200 text-xs text-gray-600">
-              This "tag" is written into a subspace of the residual stream orthogonal to the output,
-              so it doesn't affect the next-token prediction yet—it's stored for later layers to use.
-            </div>
+            <SubspaceTagVisualizer
+              currentStepToken={selectedToken !== null ? tokens[selectedToken].text : null}
+              attendedToken={attendedTokenIdx !== null ? tokens[attendedTokenIdx].text : null}
+              isActive={selectedToken !== null && attendedTokenIdx !== null}
+            />
           </div>
         </div>
       )}
 
       {/* Explanation */}
       <div className="mt-4 p-3 bg-purple-50 border border-purple-200 rounded-lg">
-        <div className="text-sm text-purple-900">
-          <strong>How it works:</strong> This head attends to the immediately previous token and copies
-          its identity into the residual stream. Each token effectively gets "tagged" with what came before it.
+        <div className="text-sm text-purple-900 leading-relaxed">
+          <strong>How it works:</strong> This head attends to the immediately previous token and writes
+          its identity into an <em>orthogonal subspace</em> of the residual stream—a direction perpendicular
+          to the unembedding output.
+          <br/><br/>
+          This is the hardest conceptual leap: the "tag" isn't <em>predicting</em> anything yet.
+          It's storing information in a "blind spot" that future layers can read, but that doesn't
+          affect the immediate next-token prediction.
+          <br/><br/>
           For example, <code className="bg-white px-1 rounded">name</code> gets tagged with{" "}
           <code className="bg-white px-1 rounded">My</code>, and <code className="bg-white px-1 rounded">is</code>{" "}
-          gets tagged with <code className="bg-white px-1 rounded">name</code>. The induction head will use these tags!
+          gets tagged with <code className="bg-white px-1 rounded">name</code>.
+          The induction head (Layer 2) will read these tags to complete the pattern!
         </div>
       </div>
     </figure>
