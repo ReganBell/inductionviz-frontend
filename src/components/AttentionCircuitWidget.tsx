@@ -399,6 +399,7 @@ export function AttentionCircuitWidget({
   const [hoveredSourceToken, setHoveredSourceToken] = useState<number | null>(
     ALL_FEATURES[0].hoveredSourceTokenIdx
   );
+  const [showTextInput, setShowTextInput] = useState(false);
 
   // Determine what data we need based on panels
   const needsQKData = panels.includes("qk");
@@ -699,67 +700,81 @@ export function AttentionCircuitWidget({
         </div>
       )}
 
-      {/* Text input */}
-      <div className="mb-8 max-w-2xl mx-auto">
-        <label className="block text-sm font-medium text-gray-700 mb-2 text-center">
-          Enter text to analyze attention patterns:
-        </label>
-        <div className="relative flex items-center">
-          <div className="absolute left-3 z-10 group">
-            <span className="text-gray-400 text-sm font-mono select-none cursor-help">
-              &lt;|BOS|&gt;
-            </span>
-            <div className="invisible group-hover:visible absolute left-0 top-full mt-1 w-64 p-2 bg-gray-900 text-white text-xs rounded shadow-lg z-20">
-              Beginning of Sequence token - a special token that marks the start of input to the model
+      {/* Text input - toggle */}
+      {showTextInput && (
+        <div className="mb-8 max-w-2xl mx-auto">
+          <label className="block text-sm font-medium text-gray-700 mb-2 text-center">
+            Enter text to analyze attention patterns:
+          </label>
+          <div className="relative flex items-center">
+            <div className="absolute left-3 z-10 group">
+              <span className="text-gray-400 text-sm font-mono select-none cursor-help">
+                &lt;|BOS|&gt;
+              </span>
+              <div className="invisible group-hover:visible absolute left-0 top-full mt-1 w-64 p-2 bg-gray-900 text-white text-xs rounded shadow-lg z-20">
+                Beginning of Sequence token - a special token that marks the start of input to the model
+              </div>
             </div>
+            <input
+              type="text"
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              className="w-full pl-24 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="Type some text..."
+            />
           </div>
-          <input
-            type="text"
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            className="w-full pl-24 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            placeholder="Type some text..."
-          />
         </div>
-      </div>
+      )}
 
       {/* OV-only mode: horizontal layout with token strip on left */}
       {needsOVData && !needsQKData ? (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-          {/* Left: Token Strip */}
-          <div className="bg-white p-4 rounded-lg border border-gray-200">
-            <TokenStrip
-              tokens={tokenStripData}
-              active={hoveredToken}
-              onHover={handleTokenHover}
-              locked={null}
-              attentionData={attentionData}
-              valueWeightedData={attentionData}
-              headDeltasData={null}
-              selectedModel="t1"
-              selectedLayer={0}
-              selectedHead={0}
-              highlightMode="attention"
-              disableFirstToken={false}
+        <>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start mb-2">
+            {/* Left: Token Strip */}
+            <div className="bg-white p-4 rounded-lg border border-gray-200">
+              <TokenStrip
+                tokens={tokenStripData}
+                active={hoveredToken}
+                onHover={handleTokenHover}
+                locked={null}
+                attentionData={attentionData}
+                valueWeightedData={attentionData}
+                headDeltasData={null}
+                selectedModel="t1"
+                selectedLayer={0}
+                selectedHead={0}
+                highlightMode="attention"
+                disableFirstToken={false}
+              />
+              <p className="text-xs text-gray-500 mt-2">
+                Hover over any token to see OV contributions
+              </p>
+            </div>
+
+            {/* Right: OV Circuit */}
+            <OVCircuitWidget
+              tokens={tokens}
+              ovLogits={ovLogits}
+              hoveredSourceToken={hoveredSourceToken}
+              hoveredToken={hoveredToken}
+              lockedToken={lockedToken}
             />
-            <p className="text-xs text-gray-500 mt-2">
-              Hover over any token to see OV contributions
-            </p>
           </div>
 
-          {/* Right: OV Circuit */}
-          <OVCircuitWidget
-            tokens={tokens}
-            ovLogits={ovLogits}
-            hoveredSourceToken={hoveredSourceToken}
-            hoveredToken={hoveredToken}
-            lockedToken={lockedToken}
-          />
-        </div>
+          {/* Toggle button */}
+          <div className="mb-8 text-center">
+            <button
+              onClick={() => setShowTextInput(!showTextInput)}
+              className="text-xs text-neutral-500 hover:text-neutral-700 underline focus:outline-none"
+            >
+              {showTextInput ? "hide input" : "use your own text"}
+            </button>
+          </div>
+        </>
       ) : (
         <>
           {/* Standard layout: Token Strip at top */}
-          <div className="mb-8 bg-white p-4 rounded-lg border border-gray-200">
+          <div className="mb-2 bg-white p-4 rounded-lg border border-gray-200">
             <TokenStrip
               tokens={tokenStripData}
               active={lockedToken !== null ? lockedToken : hoveredToken}
@@ -782,6 +797,16 @@ export function AttentionCircuitWidget({
                 ? "Click a token to lock, then hover previous tokens to see OV contributions"
                 : "Click a token to lock and see its attention pattern"}
             </p>
+          </div>
+
+          {/* Toggle button */}
+          <div className="mb-8 text-center">
+            <button
+              onClick={() => setShowTextInput(!showTextInput)}
+              className="text-xs text-neutral-500 hover:text-neutral-700 underline focus:outline-none"
+            >
+              {showTextInput ? "hide input" : "use your own text"}
+            </button>
           </div>
 
           <div className={`grid gap-8 items-start ${

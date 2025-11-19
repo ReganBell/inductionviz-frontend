@@ -74,6 +74,7 @@ export function InductionComparisonWidget({
   const [text, setText] = useState(initialText);
   const [tokens, setTokens] = useState<string[]>([]);
   const [hoveredTokenIdx, setHoveredTokenIdx] = useState<number | null>(null);
+  const [showTextInput, setShowTextInput] = useState(false);
 
   // Predictions from both models
   const [t1Predictions, setT1Predictions] = useState<Prediction[][] | null>(null);
@@ -168,62 +169,76 @@ export function InductionComparisonWidget({
         </p>
       </div>
 
-      {/* Text input */}
-      <div className="mb-8 max-w-2xl mx-auto">
-        <div className="relative flex items-center">
-          <div className="absolute left-3 z-10 group">
-            <span className="text-gray-400 text-sm font-mono select-none cursor-help">
-              &lt;|BOS|&gt;
-            </span>
-            <div className="invisible group-hover:visible absolute left-0 top-full mt-1 w-64 p-2 bg-gray-900 text-white text-xs rounded shadow-lg z-20">
-              Beginning of Sequence token - a special token that marks the start of input to the model
+      {/* Text input - toggle */}
+      {showTextInput && (
+        <div className="mb-8 max-w-2xl mx-auto">
+          <div className="relative flex items-center">
+            <div className="absolute left-3 z-10 group">
+              <span className="text-gray-400 text-sm font-mono select-none cursor-help">
+                &lt;|BOS|&gt;
+              </span>
+              <div className="invisible group-hover:visible absolute left-0 top-full mt-1 w-64 p-2 bg-gray-900 text-white text-xs rounded shadow-lg z-20">
+                Beginning of Sequence token - a special token that marks the start of input to the model
+              </div>
             </div>
+            <input
+              type="text"
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              className="w-full pl-24 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="Type some text..."
+            />
           </div>
-          <input
-            type="text"
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            className="w-full pl-24 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            placeholder="Type some text..."
-          />
         </div>
-      </div>
+      )}
 
       {/* Token strip */}
       {tokens.length > 0 && (
-        <div className="mb-8 bg-white p-4 rounded-lg border border-gray-200">
-          <div style={{ lineHeight: 1.8, wordBreak: "break-word", userSelect: "none" }}>
-            {tokens.map((token, idx) => {
-              const isHovered = hoveredTokenIdx === idx;
-              const isActive = activeTokenIdx === idx && hoveredTokenIdx === null;
+        <>
+          <div className="mb-2 bg-white p-4 rounded-lg border border-gray-200">
+            <div style={{ lineHeight: 1.8, wordBreak: "break-word", userSelect: "none" }}>
+              {tokens.map((token, idx) => {
+                const isHovered = hoveredTokenIdx === idx;
+                const isActive = activeTokenIdx === idx && hoveredTokenIdx === null;
 
-              let bgColor = "";
-              let borderStyle = "";
+                let bgColor = "";
+                let borderStyle = "";
 
-              if (isHovered) {
-                bgColor = "bg-blue-200";
-                borderStyle = "border-b-2 border-blue-500";
-              } else if (isActive) {
-                bgColor = "bg-blue-100";
-                borderStyle = "border-b-2 border-blue-400";
-              } else {
-                bgColor = "hover:bg-gray-100";
-                borderStyle = "border-b border-dashed border-gray-300";
-              }
+                if (isHovered) {
+                  bgColor = "bg-blue-200";
+                  borderStyle = "border-b-2 border-blue-500";
+                } else if (isActive) {
+                  bgColor = "bg-blue-100";
+                  borderStyle = "border-b-2 border-blue-400";
+                } else {
+                  bgColor = "hover:bg-gray-100";
+                  borderStyle = "border-b border-dashed border-gray-300";
+                }
 
-              return (
-                <span
-                  key={idx}
-                  onMouseEnter={() => setHoveredTokenIdx(idx)}
-                  onMouseLeave={() => setHoveredTokenIdx(null)}
-                  className={`px-1 py-0.5 cursor-pointer transition-colors ${bgColor} ${borderStyle}`}
-                >
-                  {token || "␠"}
-                </span>
-              );
-            })}
+                return (
+                  <span
+                    key={idx}
+                    onMouseEnter={() => setHoveredTokenIdx(idx)}
+                    onMouseLeave={() => setHoveredTokenIdx(null)}
+                    className={`px-1 py-0.5 cursor-pointer transition-colors ${bgColor} ${borderStyle}`}
+                  >
+                    {token || "␠"}
+                  </span>
+                );
+              })}
+            </div>
           </div>
-        </div>
+
+          {/* Toggle button */}
+          <div className="mb-8 text-center">
+            <button
+              onClick={() => setShowTextInput(!showTextInput)}
+              className="text-xs text-neutral-500 hover:text-neutral-700 underline focus:outline-none"
+            >
+              {showTextInput ? "hide input" : "use your own text"}
+            </button>
+          </div>
+        </>
       )}
 
       {/* Prediction panels */}

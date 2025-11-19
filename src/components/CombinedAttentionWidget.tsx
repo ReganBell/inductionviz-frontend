@@ -96,6 +96,8 @@ export function CombinedAttentionWidget({
   const [text, setText] = useState(initialText);
   const [tokens, setTokens] = useState<string[]>([]);
   const [hoveredTokenIdx, setHoveredTokenIdx] = useState<number | null>(null);
+  const [showTextInput, setShowTextInput] = useState(false);
+  const [disablePositionalEmbeddings, setDisablePositionalEmbeddings] = useState(false);
 
   // Batch results - we always fetch these
   const [batchBigramResults, setBatchBigramResults] = useState<BigramBatchResponse | null>(null);
@@ -127,6 +129,7 @@ export function CombinedAttentionWidget({
               model_name: "t1",
               layers: [0],
               heads: [0],
+              disable_positional_embeddings: disablePositionalEmbeddings,
             }),
           });
 
@@ -171,7 +174,7 @@ export function CombinedAttentionWidget({
 
     const timer = setTimeout(fetchData, 300);
     return () => clearTimeout(timer);
-  }, [text, needsL1Data]);
+  }, [text, needsL1Data, disablePositionalEmbeddings]);
 
   // Determine active token index: use hovered token if available, otherwise use last token
   const activeTokenIdx = hoveredTokenIdx !== null 
@@ -203,38 +206,54 @@ export function CombinedAttentionWidget({
     <div className="my-12 p-8 bg-gray-50 rounded-lg border border-gray-200">
       <div className="mb-6 text-center">
         <h3 className="text-xl font-semibold text-gray-900">
-          {needsL1Data ? "Combined Effect: Bigram vs. Attention" : "Bigram model"}
+          {needsL1Data ? "Bigram vs. Attention" : "Bigram model"}
         </h3>
         <p className="text-sm text-gray-600 mt-1">
-          Hover over a token to see what comes next
+          Hover over a token to see what the model thinks will come next
         </p>
+        {needsL1Data && (
+          <div className="mt-3 flex items-center justify-center gap-2">
+            <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-600">
+              <input
+                type="checkbox"
+                checked={disablePositionalEmbeddings}
+                onChange={(e) => setDisablePositionalEmbeddings(e.target.checked)}
+                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+              />
+              Disable positional embeddings
+            </label>
+          </div>
+        )}
       </div>
 
-      {/* Text input */}
-      <div className="mb-8 max-w-2xl mx-auto">
-        <div className="relative flex items-center">
-          <div className="absolute left-3 z-10 group">
-            <span className="text-gray-400 text-sm font-mono select-none cursor-help">
-              &lt;|BOS|&gt;
-            </span>
-            <div className="invisible group-hover:visible absolute left-0 top-full mt-1 w-64 p-2 bg-gray-900 text-white text-xs rounded shadow-lg z-20">
-              Beginning of Sequence token - a special token that marks the start of input to the model
+      {/* Text input - toggle */}
+      {showTextInput && (
+        <div className="mb-8 max-w-2xl mx-auto">
+          <div className="relative flex items-center">
+            <div className="absolute left-3 z-10 group">
+              <span className="text-gray-400 text-sm font-mono select-none cursor-help">
+                &lt;|BOS|&gt;
+              </span>
+              <div className="invisible group-hover:visible absolute left-0 top-full mt-1 w-64 p-2 bg-gray-900 text-white text-xs rounded shadow-lg z-20">
+                Beginning of Sequence token - a special token that marks the start of input to the model
+              </div>
             </div>
+            <input
+              type="text"
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              className="w-full pl-24 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="Type some text..."
+            />
           </div>
-          <input
-            type="text"
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            className="w-full pl-24 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            placeholder="Type some text..."
-          />
         </div>
-      </div>
+      )}
 
       {/* Token strip - always show */}
       {tokens.length > 0 && (
-        <div className="mb-8 bg-white p-4 rounded-lg border border-gray-200">
-          <div style={{ lineHeight: 1.8, wordBreak: "break-word", userSelect: "none" }}>
+        <>
+          <div className="mb-2 bg-white p-4 rounded-lg border border-gray-200">
+            <div style={{ lineHeight: 1.8, wordBreak: "break-word", userSelect: "none" }}>
             {tokens.map((token, idx) => {
               // Calculate background color based on attention weight
               let bgColor = "";
@@ -282,13 +301,24 @@ export function CombinedAttentionWidget({
                 </span>
               );
             })}
+            </div>
+            {needsL1Data && attentionWeights && (
+              <p className="text-xs text-gray-500 mt-2 text-center">
+                Green highlights show attention weights
+              </p>
+            )}
           </div>
-          {needsL1Data && attentionWeights && (
-            <p className="text-xs text-gray-500 mt-2 text-center">
-              Green highlights show attention weights
-            </p>
-          )}
-        </div>
+
+          {/* Toggle button */}
+          <div className="mb-8 text-center">
+            <button
+              onClick={() => setShowTextInput(!showTextInput)}
+              className="text-xs text-neutral-500 hover:text-neutral-700 underline focus:outline-none"
+            >
+              {showTextInput ? "hide input" : "use your own text"}
+            </button>
+          </div>
+        </>
       )}
 
       {/* Prediction panels - always show when there's data */}

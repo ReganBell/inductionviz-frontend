@@ -8,6 +8,7 @@ import { PreviousTokenHeadDemo } from "../components/PreviousTokenHeadDemo";
 import { InductionHeadDemo } from "../components/InductionHeadDemo";
 import { InductionComparisonWidget } from "../components/InductionComparisonWidget";
 import { EvolutionWidget } from "../components/EvolutionWidget";
+import { TokenEmbeddingDiagram } from "../components/TokenEmbeddingDiagram";
 import { API_URL } from "../config";
 import type { AttentionPatternsResponse, TokenInfo } from "../types";
 import NoLayerFigure from "../components/NoLayerFigure";
@@ -18,34 +19,44 @@ export function Explainer() {
     <article className="min-h-screen bg-white text-neutral-900 antialiased">
       {/* Distill-style header */}
       <header className="mx-auto max-w-3xl px-6 pt-14 pb-12">
-        <p className="text-sm tracking-widest uppercase text-neutral-500">Interactive Notes</p>
-        <h1 className="mt-2 font-serif text-5xl leading-tight">Induction Heads</h1>
+        <p className="text-sm tracking-widest uppercase text-neutral-500">Interp Speedrun #1</p>
+        <h1 className="mt-2 font-serif text-5xl leading-tight">Toy Transformers</h1>
       </header>
 
       {/* Main content */}
       <div className="mx-auto max-w-3xl px-6 pb-24">
+      <figure className="pb-6">
+        <img src='/toytransformer.jpg' />
+        <figcaption className="text-center text-neutral-500 text-sm mt-2">Not this kind.</figcaption>
+      </figure>
+
 
         {/* Introduction */}
         <section className="prose prose-neutral max-w-none">
           <p className="text-lg leading-relaxed">
+            {/* why this paper? it's the first real mechinterp paper *on transformers* -- there were others on CNNs etc before */}
             Let's walk through <a href="https://transformer-circuits.pub/2021/framework/index.html" className="underline">A Mathematical Framework for Transformer Circuits</a>. I think this paper is where the term "mechanistic interpretability" actually comes from. <br></br> <small className="text-neutral-600">(edit: found it on a podcast with Chris a <a href="https://80000hours.org/podcast/episodes/chris-olah-interpretability-research" className="underline">few months before</a>, and it was hinted at back in the <a href="https://distill.pub/2020/circuits/zoom-in/" className="underline">Distill days</a>)</small>
           </p>
 
           <p className="text-lg leading-relaxed mt-6">
-            The idea: build the tiniest imaginable transformer that can still do transformer-y stuff, and figure out why.
+            The idea is to build the tiniest imaginable transformer that can still do transformer-y stuff, and figure out how it works.
           </p>
 
           <p className="text-lg leading-relaxed mt-6">
-           Attempt #1: what if you take out <em>all</em> the layers? Well, for one, it's not a transformer anymore: it's the on-ramp and off-ramp with nothing in between.
+            {/* Maybe experiment #1 */}
+           Attempt #1: what if you took out <em>all</em> the layers? Well, for one, it's not a transformer anymore: it's the on-ramp and off-ramp with nothing in between, it's just the bun of the sandwich.
           </p>
 
-          <NoLayerFigure />
+      <NoLayerFigure />
 
+          {/* TODO: don't explain this, no additions until we've fixed everything else */}
+          {/* <p className="text-lg leading-relaxed mt-6">
+             The embedding matrix maps each token into latent space, and the unembedding matrix maps out a corresponding guess for the token to follow. It can be a little difficult to think about what it means to map from an X-dimensional space (the vocabulary size) to the Y-dimensional latent space of the model. A nice intuition is that it's a more complex version of this:
+             {/* diagram of mapping English characters into a 2-D space */}
+             {/* Caption: here, were projecting from twenty-six dimensions, where letters are labelled with their exact identity, to two where they are arrayed out on a surface with X and Y coordinates. Notice how vowels cluster together, because the model understands them to be similar.  */}
+          {/* </p> */}
           <p className="text-lg leading-relaxed mt-6">
-             The embedding matrix maps each token into latent space, and the unembedding matrix maps out a corresponding guess for the token to follow. 
-          </p>
-          <p className="text-lg leading-relaxed mt-6">
-            When you train this, you end up learning a bigram model. I think it's worth considering why that is, intuitively. My answer is that, without attention, you truly have no information to predict the next token beyond the one that came before it.<sup>1</sup> In this environment, even if you had an infinitely smart model, you simply don't know enough about the situation you're in to do better than a "dumb" prediction based on occurrence statistics.
+            When you train this, you end up learning a bigram model, the simplest possible "next token predictor." You simply don't know enough about the situation you're in to do better than a "dumb" prediction based on occurrence statistics.
           </p>
 
                   {/* Bigram Widget */}
@@ -53,37 +64,50 @@ export function Explainer() {
           <CombinedAttentionWidget
             panels={["bigram"]}
           />
+          {/* Maybe a caption here: we are limited to a single token of context. The sentence at large is about football, but we can only predict football related tokens  */}
         </div>
+          {/* It answers the question "What token comes after `football`?" with the simple  */}
         <p className="text-lg leading-relaxed mt-6">
-        Either way, what you've got is a learned bigram model, squeezed down into however much space you want. Bigram models are both bad and huge: the full transition matrix for the GPT-2 vocabulary takes up 10GB with 32-bit floats. Most transitions between tokens are never observed (I wonder how this holds over the full internet; eg it's kind of spooky that 15% of Google searches are novel) so the sparse version is 1000x smaller than that. So it's maybe not surprising but still kind of cool to see that we can learn a compressed representation that retains most of the "good" in around 1% of the storage.
+          A traditional bigram model is built by literally counting every single time a particular token follows another.
+          A <em>learned</em> bigram model is a little cooler than that, in part because of how small it is.
+          Ever hear of "compression = intelligence?"
+          The full transition table for OpenTextWeb is ~10GB, but it's sparse (full of zeroes) because most tokens never follow each other. Our model is only <code className="bg-gray-100 rounded px-1.5 py-0.5">d_model</code> numbers (~1KB) and is almost as good.
+          That's semantic compression at work. In latent space, we can squash tokens together without too much loss of accuracy — and the visualization below shows exactly how.
         </p>
+
+        <TokenEmbeddingDiagram />
 
         </section>
 
 
-
         {/* Continue with single attention layer */}
         <section className="prose prose-neutral max-w-none mt-12">
-          <h2 className="font-serif text-3xl mt-12 mb-6">Adding One Layer of Attention</h2>
+          <h2 className="font-serif text-3xl mt-12 mb-6">One Attention Layer</h2>
 
           <p className="text-lg leading-relaxed">
-            Ok, so let's allow ourselves one tiny extra piece: a layer of attention. What does that get us?
-          </p>
-
-          <p className="text-lg leading-relaxed mt-6">
-            The bigram statistics (given X, what's Y?) are still basically the foundation of the model. But now we're able to bias those predictions given other tokens that came before. In certain situations, we can do much better. 
-            The second we use a word like "quarterback", we've provided a huge blinking signpost to the model that we're talking about football.
-            In this regime, it makes sense to dramatically boost of all manner of football and generally sports-related tokens.
+            They say attention is all you need, so let's see what that gets us. In particular, we add <em>only</em> an attention layer and <em>omit</em> the MLP layer, where the neurons of the network actually live.
           </p>
 
           <CombinedAttentionWidget panels={["l1", "bigram"]} />
 
           <p className="text-lg leading-relaxed mt-6">
-          There are a lot of mental models for this, but here’s what I’m using right now: we build up an affinity matrix (also called the QK circuit) that tells us how much token X cares about any other token. We learn this over time as the network trains.
+            The heart of the model is still the bigram transition table. But now, we're able to bias those predictions given other tokens that came before. In certain situations, we can do much better. 
+            The second we use a word like "quarterback", we've provided a huge blinking signpost to the model that we're talking about football.
+            In this regime, it makes sense to dramatically boost of all manner of football and generally sports-related tokens.
+          </p>
+
+
+          <p className="text-lg leading-relaxed mt-6">
+            The original paper characterizes our model now in terms of skip-trigrams;
+            a skip-trigram gets to incorporate an additional previous token as evidence,
+            and that token can have occurred anywhere in the past.
+            Moreover, the attention mechanism lets us take a weighted average over many different skip-trigrams to predict the next token.
           </p>
 
           <p className="text-lg leading-relaxed mt-6">
-            First, we build up an <em>affinity matrix</em> (also called the <strong>QK circuit</strong>) that tells us how much each token cares about every other token. This is learned during training.
+           How does this work? Attention is usually explained in terms of keys, queries, and values.
+           This paper uses instead the QK and OV circuits, which I find a little more intuitive.
+           The QK circuit (I often like to think of it as an <i>affinity matrix</i>) tells us how much a token X should care about any other token Y, based on their values. We learn this pattern over time as the network trains.
           </p>
 
           <AttentionCircuitWidget
@@ -92,11 +116,17 @@ export function Explainer() {
           />
 
           <p className="text-lg leading-relaxed mt-6">
-            Second, we learn the <strong>OV circuit</strong>, which tells us: when we <em>do</em> attend to a token, how should that modulate our prediction for what comes next?
-          </p>
+            Certain attention patterns are easier to interpret than others, and different attention heads will learn to attend in their own ways.
+            A common pattern in a single-layer network is to attend to signposts that indicate something about the regime we're in.
+            For example, certain words may signpost a legal context, a sports context, or a medical one.
+            Other tokens may change the context of what follows them -- for example, the words following a `(` are inside a parenthetical, and can be expected to vary systematically from those that aren't.
+            Accordingly, the model will learn to pay attention to these tokens.
+          </p> 
 
           <p className="text-lg leading-relaxed mt-6">
-            Let's break down these two circuits in detail:
+            What does attending to a token actually do?
+            This is decided by the <strong>OV circuit</strong>, which tells us: when we <em>do</em> attend to a token, how should that modulate our prediction for what comes next?
+            Crucially, the OV circuit is totally independent of the QK. If I'm token X and you attend to me, I'll give you the same output regardless of your (token) identity.
           </p>
 
           <AttentionCircuitWidget
@@ -106,11 +136,16 @@ export function Explainer() {
           />
 
           <p className="text-lg leading-relaxed mt-6">
+            This is an unusually spicy skip-trigram. When this head attends to the name "Michael" (or "Chris", "Andrew", "Dave", "Simon", etc) it becomes much more likely to predict a basket of words associated with leadership and seniority: CEO, manager, director, etc.
+            This attention head has picked up on the stereotype of (slightly older) white male names in positions of authority.
+          </p> 
+
+          {/* <p className="text-lg leading-relaxed mt-6">
             In Ruby, you often see control patterns like:
           </p>
 
           <pre className="bg-neutral-50 p-4 rounded-lg border border-neutral-200 text-sm font-mono overflow-x-auto mt-4">
-{`if <thing A is true>
+{`if <thing A is true>s
     <do B>
 else
   <do C>
@@ -119,20 +154,17 @@ end`}
 
           <p className="text-lg leading-relaxed mt-6">
             Now say that X is <code className="bg-neutral-100 px-1.5 py-0.5 rounded text-sm font-mono">else</code> — the next token could be anything, maybe <code className="bg-neutral-100 px-1.5 py-0.5 rounded text-sm font-mono">!</code> as in, "do what I say, or else!" Our bigram model thinks <code className="bg-neutral-100 px-1.5 py-0.5 rounded text-sm font-mono">where</code> is most likely — reasonable. But say attention has learned the Ruby pattern — in the affinity matrix there's a high value for any occurrence of <code className="bg-neutral-100 px-1.5 py-0.5 rounded text-sm font-mono">if</code>, so we'll attend to it. Having done so, we ask the OV circuit, "what do we do if we've seen <code className="bg-neutral-100 px-1.5 py-0.5 rounded text-sm font-mono">if</code> previously?" And the OV circuit will tell us, "be on the lookout for <code className="bg-neutral-100 px-1.5 py-0.5 rounded text-sm font-mono">end</code>, there's a good chance it turns up soon." So we'll boost the probability of <code className="bg-neutral-100 px-1.5 py-0.5 rounded text-sm font-mono">end</code> in our guess for the next token. You can imagine bending our probabilistic model of language from its lumpiest, lowest-context form, like wet clay, into a finer approximation of genuine English. More and more training examples, and more architecture with which to accommodate their underlying structure, will continue to shape and smooth the model into the correct shape.
-          </p>
+          </p> */}
 
           <p className="text-lg leading-relaxed mt-6">
-            One important limitation is that the QK circuit and OV circuit are completely separate. Each token, like <code className="bg-neutral-100 px-1.5 py-0.5 rounded text-sm font-mono">if</code>, can only give a <em>single</em> answer for how we should modify our guess given its presence. It does not know which token is attending to it. That's unfortunate because, competing patterns are inevitable.
+            Recall that the QK circuit and OV circuit act separately. When tokens are attended to (and thereby influence the model's next-token guess) they do not who is doing the attending. That can be tricky, because competing patterns are inevitable.
           </p>
 
           <CompetingPatternsDemo />
 
           <p className="text-lg leading-relaxed mt-6">
-            Luckily, lots of patterns are synonyms and they <em>can</em> share a head. For example, Bash uses <code className="bg-neutral-100 px-1.5 py-0.5 rounded text-sm font-mono">fi</code> instead of <code className="bg-neutral-100 px-1.5 py-0.5 rounded text-sm font-mono">end</code> in the exact same construction — no problem! We just boost <code className="bg-neutral-100 px-1.5 py-0.5 rounded text-sm font-mono">fi</code> as well as <code className="bg-neutral-100 px-1.5 py-0.5 rounded text-sm font-mono">end</code> in the OV entry for <code className="bg-neutral-100 px-1.5 py-0.5 rounded text-sm font-mono">if</code>. As long as other tokens don't attend to <code className="bg-neutral-100 px-1.5 py-0.5 rounded text-sm font-mono">if</code> except <code className="bg-neutral-100 px-1.5 py-0.5 rounded text-sm font-mono">then</code> it's 100% fine for <code className="bg-neutral-100 px-1.5 py-0.5 rounded text-sm font-mono">if</code>'s entry in the OV circuit to equal "what you should do when <code className="bg-neutral-100 px-1.5 py-0.5 rounded text-sm font-mono">then</code> attends to you."
-          </p>
-
-          <p className="text-lg leading-relaxed mt-6">
-            In general though, to store the many patterns present in English (not to mention other languages, programming syntax, and so on), you can see that we will need both the ability to have many different corresponding QK and OV circuits; we will run many different instances of attention that can pick up different patterns.
+            Luckily, lots of patterns are also synonyms and they <em>can</em> happily share an attention head.
+            In fact, they have to. Our model has only seven attention heads, but encodes many learned features and patterns.
           </p>
 
           <AttentionCircuitWidget />

@@ -91,6 +91,7 @@ export function BigramWidget() {
   const [loading, setLoading] = useState(false);
   const [batchResults, setBatchResults] = useState<BigramBatchResponse | null>(null);
   const [selectedTokenIdx, setSelectedTokenIdx] = useState<number>(0);
+  const [showCustomInput, setShowCustomInput] = useState(false);
 
   const debouncedText = useDebounced(text, 220);
 
@@ -133,29 +134,40 @@ export function BigramWidget() {
 
   return (
     <figure className="rounded-2xl border border-neutral-200 bg-neutral-50/60 p-5 shadow-sm">
-      {/* Text input */}
+      {/* Text input / suggestions */}
       <div>
         <label className="mb-2 block text-sm text-neutral-600"><SmallCaps>Input Text</SmallCaps></label>
-        <div className="flex items-center gap-2">
+
+        {showCustomInput ? (
           <input
             value={text}
             onChange={(e) => setText(e.target.value)}
             placeholder="e.g., My name is"
             className="w-full rounded-xl border border-neutral-300 bg-white px-3 py-2 font-mono text-sm shadow-inner outline-none focus:ring-2 focus:ring-neutral-800"
           />
-        </div>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {suggestions.map((s) => (
+              <button
+                key={s}
+                onClick={() => setText(s)}
+                className="rounded-full border border-neutral-300 bg-white/70 px-3 py-1 text-sm text-neutral-700 hover:bg-white focus:outline-none focus:ring-2 focus:ring-neutral-800"
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
 
-        <div className="mt-3 flex flex-wrap gap-2">
-          {suggestions.map((s) => (
-            <button
-              key={s}
-              onClick={() => setText(s)}
-              className="rounded-full border border-neutral-300 bg-white/70 px-3 py-1 text-sm text-neutral-700 hover:bg-white focus:outline-none focus:ring-2 focus:ring-neutral-800"
-            >
-              {s}
-            </button>
-          ))}
-        </div>
+      {/* Toggle button */}
+      <div className="mt-3 text-center">
+        <button
+          onClick={() => setShowCustomInput(!showCustomInput)}
+          className="text-xs text-neutral-500 hover:text-neutral-700 underline focus:outline-none"
+        >
+          {showCustomInput ? "use suggestions" : "use your own text"}
+        </button>
       </div>
 
       {/* Token selector */}
