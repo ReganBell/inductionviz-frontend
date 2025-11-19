@@ -124,8 +124,8 @@ export function EvolutionWidget() {
             {/* Loss curve */}
             <polyline
               points={data.steps
-                .map((_, idx) => {
-                  const x = (idx / (data.steps.length - 1)) * 100;
+                .map((step, idx) => {
+                  const x = ((step - data.steps[0]) / (data.steps[data.steps.length - 1] - data.steps[0])) * 100;
                   const loss = data.loss[idx];
                   if (loss === null || loss === undefined) return null;
                   const y = 100 - ((loss - minLoss) / (maxLoss - minLoss)) * 80;
@@ -141,9 +141,9 @@ export function EvolutionWidget() {
 
             {/* Current position indicator */}
             <line
-              x1={`${(currentStepIdx / (data.steps.length - 1)) * 100}%`}
+              x1={`${((currentStep - data.steps[0]) / (data.steps[data.steps.length - 1] - data.steps[0])) * 100}%`}
               y1="0"
-              x2={`${(currentStepIdx / (data.steps.length - 1)) * 100}%`}
+              x2={`${((currentStep - data.steps[0]) / (data.steps[data.steps.length - 1] - data.steps[0])) * 100}%`}
               y2="100"
               stroke="#3B82F6"
               strokeWidth="2"
@@ -165,8 +165,8 @@ export function EvolutionWidget() {
           className="w-full h-2 bg-blue-100 rounded-lg appearance-none cursor-pointer"
           style={{
             background: `linear-gradient(to right, #3B82F6 0%, #3B82F6 ${
-              (currentStepIdx / (data.steps.length - 1)) * 100
-            }%, #DBEAFE ${(currentStepIdx / (data.steps.length - 1)) * 100}%, #DBEAFE 100%)`,
+              ((currentStep - data.steps[0]) / (data.steps[data.steps.length - 1] - data.steps[0])) * 100
+            }%, #DBEAFE ${((currentStep - data.steps[0]) / (data.steps[data.steps.length - 1] - data.steps[0])) * 100}%, #DBEAFE 100%)`,
           }}
         />
 
@@ -407,8 +407,8 @@ export function EvolutionWidget() {
               {/* Score line */}
               <polyline
                 points={data.steps
-                  .map((_, idx) => {
-                    const x = (idx / (data.steps.length - 1)) * 100;
+                  .map((step, idx) => {
+                    const x = ((step - data.steps[0]) / (data.steps[data.steps.length - 1] - data.steps[0])) * 100;
                     const score = prevHeadMetrics.prev_tok[idx];
                     const y = (1 - score) * 100;
                     return `${x},${y}`;
@@ -422,7 +422,7 @@ export function EvolutionWidget() {
 
               {/* Current position */}
               <circle
-                cx={`${(currentStepIdx / (data.steps.length - 1)) * 100}%`}
+                cx={`${((currentStep - data.steps[0]) / (data.steps[data.steps.length - 1] - data.steps[0])) * 100}%`}
                 cy={`${(1 - currentPrevTok) * 100}%`}
                 r="4"
                 fill="#10B981"
@@ -460,8 +460,8 @@ export function EvolutionWidget() {
               {/* Score line */}
               <polyline
                 points={data.steps
-                  .map((_, idx) => {
-                    const x = (idx / (data.steps.length - 1)) * 100;
+                  .map((step, idx) => {
+                    const x = ((step - data.steps[0]) / (data.steps[data.steps.length - 1] - data.steps[0])) * 100;
                     const score = indHeadMetrics.induction[idx];
                     const y = (1 - score) * 100;
                     return `${x},${y}`;
@@ -475,7 +475,7 @@ export function EvolutionWidget() {
 
               {/* Current position */}
               <circle
-                cx={`${(currentStepIdx / (data.steps.length - 1)) * 100}%`}
+                cx={`${((currentStep - data.steps[0]) / (data.steps[data.steps.length - 1] - data.steps[0])) * 100}%`}
                 cy={`${(1 - currentInduction) * 100}%`}
                 r="4"
                 fill="#8B5CF6"
