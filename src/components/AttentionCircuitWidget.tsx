@@ -383,21 +383,21 @@ export function AttentionCircuitWidget({
   initialText?: string;
   initialTab?: number;
 } = {}) {
-  const [selectedFeatureIdx, setSelectedFeatureIdx] = useState(0);
+  const [selectedFeatureIdx, setSelectedFeatureIdx] = useState(initialTab);
   const currentFeature = ALL_FEATURES[selectedFeatureIdx];
   const selectedHead = currentFeature.headId;
 
   const [text, setText] = useState(
-    initialText || ALL_FEATURES[0].text
+    initialText || ALL_FEATURES[initialTab].text
   );
   const [hoveredToken, setHoveredToken] = useState<number | null>(
-    ALL_FEATURES[0].lockedTokenIdx
+    ALL_FEATURES[initialTab].lockedTokenIdx
   );
   const [lockedToken, setLockedToken] = useState<number | null>(
-    ALL_FEATURES[0].lockedTokenIdx
+    ALL_FEATURES[initialTab].lockedTokenIdx
   );
   const [hoveredSourceToken, setHoveredSourceToken] = useState<number | null>(
-    ALL_FEATURES[0].hoveredSourceTokenIdx
+    ALL_FEATURES[initialTab].hoveredSourceTokenIdx
   );
   const [showTextInput, setShowTextInput] = useState(false);
 

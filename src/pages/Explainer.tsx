@@ -67,7 +67,7 @@ export function Explainer() {
           {/* Maybe a caption here: we are limited to a single token of context. The sentence at large is about football, but we can only predict football related tokens  */}
         </div>
           {/* It answers the question "What token comes after `football`?" with the simple  */}
-        <p className="text-lg leading-relaxed mt-6">
+        {/* <p className="text-lg leading-relaxed mt-6">
           A traditional bigram model is built by literally counting every single time a particular token follows another.
           A <em>learned</em> bigram model is a little cooler than that, in part because of how small it is.
           Ever hear of "compression = intelligence?"
@@ -75,7 +75,7 @@ export function Explainer() {
           That's semantic compression at work. In latent space, we can squash tokens together without too much loss of accuracy — and the visualization below shows exactly how.
         </p>
 
-        <TokenEmbeddingDiagram />
+        <TokenEmbeddingDiagram /> */}
 
         </section>
 
