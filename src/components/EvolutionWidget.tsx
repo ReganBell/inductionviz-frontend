@@ -64,7 +64,7 @@ export function EvolutionWidget() {
         }
         return prev + 1;
       });
-    }, 100); // 100ms per step
+    }, 15); // 15ms per step (~13 seconds for 862 steps)
 
     return () => clearInterval(interval);
   }, [isPlaying, data]);
