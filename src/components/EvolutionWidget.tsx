@@ -40,7 +40,7 @@ const HEAD_COLORS: Record<number, string> = {
 export function EvolutionWidget() {
   const [data, setData] = useState<TrainingData | null>(null);
   const [currentStepIdx, setCurrentStepIdx] = useState(0);
-  const [selectedPrevHead, setSelectedPrevHead] = useState<string>("L0H3");
+  const [selectedPrevHead, setSelectedPrevHead] = useState<string>("L0H1");
   const [selectedIndHead, setSelectedIndHead] = useState<string>("L1H6");
   const [isPlaying, setIsPlaying] = useState(false);
 
@@ -340,7 +340,7 @@ export function EvolutionWidget() {
         <div className="mt-4 text-xs text-gray-500">
           Blue lines show Q-composition strength (how much L1 relies on L0).
           <span className="text-pink-600 font-semibold"> Pink = selected circuit</span>.
-          <strong> Key circuit: L0H3 → L1H6</strong> (Q-comp: {data.final_composition["L1H6_L0H3"]?.toFixed(3)})
+          <strong> Strongest prev-tok heads: L0H1 (15.2%), L0H7 (7.0%)</strong>
         </div>
       </div>
 
@@ -352,7 +352,7 @@ export function EvolutionWidget() {
               Previous Token Head (Layer 0)
             </div>
             <div className="flex gap-2">
-              {["L0H3", "L0H5", "L0H6"].map((head) => (
+              {["L0H1", "L0H7", "L0H3"].map((head) => (
                 <button
                   key={head}
                   onClick={() => setSelectedPrevHead(head)}
