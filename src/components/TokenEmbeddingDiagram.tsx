@@ -154,12 +154,11 @@ const CLUSTER_DESCRIPTIONS_3D = [
 ];
 
 export function TokenEmbeddingDiagram() {
-  const [view, setView] = useState<"2d" | "3d">("2d");
   const [hoveredPoint, setHoveredPoint] = useState<TokenPoint | null>(null);
+  const [hoveredCluster, setHoveredCluster] = useState<number | null>(null);
   const [data] = useState(() => generateSyntheticData());
 
-  const is3D = view === "3d";
-  const clusterDescriptions = is3D ? CLUSTER_DESCRIPTIONS_3D : CLUSTER_DESCRIPTIONS_2D;
+  const clusterDescriptions = CLUSTER_DESCRIPTIONS_2D;
 
   // Calculate bounds for normalization
   const bounds2d = data.reduce(
@@ -172,85 +171,30 @@ export function TokenEmbeddingDiagram() {
     { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity }
   );
 
-  const bounds3d = data.reduce(
-    (acc, p) => ({
-      minX: Math.min(acc.minX, p.x3d),
-      maxX: Math.max(acc.maxX, p.x3d),
-      minY: Math.min(acc.minY, p.y3d),
-      maxY: Math.max(acc.maxY, p.y3d),
-      minZ: Math.min(acc.minZ, p.z3d),
-      maxZ: Math.max(acc.maxZ, p.z3d),
-    }),
-    { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity, minZ: Infinity, maxZ: -Infinity }
-  );
-
   // Normalize coordinates to SVG space
   const padding = 40;
   const width = 500;
   const height = 300;
 
   const normalizePoint = (point: TokenPoint) => {
-    if (is3D) {
-      // Simple isometric projection: x' = x - z*0.5, y' = y - z*0.5
-      const rangeX = bounds3d.maxX - bounds3d.minX;
-      const rangeY = bounds3d.maxY - bounds3d.minY;
-      const rangeZ = bounds3d.maxZ - bounds3d.minZ;
+    const rangeX = bounds2d.maxX - bounds2d.minX;
+    const rangeY = bounds2d.maxY - bounds2d.minY;
 
-      const normX = (point.x3d - bounds3d.minX) / rangeX;
-      const normY = (point.y3d - bounds3d.minY) / rangeY;
-      const normZ = (point.z3d - bounds3d.minZ) / rangeZ;
-
-      // Apply isometric projection
-      const isoX = normX - normZ * 0.5;
-      const isoY = normY - normZ * 0.5;
-
-      return {
-        x: padding + isoX * (width - 2 * padding),
-        y: height - padding - isoY * (height - 2 * padding),
-      };
-    } else {
-      const rangeX = bounds2d.maxX - bounds2d.minX;
-      const rangeY = bounds2d.maxY - bounds2d.minY;
-
-      return {
-        x: padding + ((point.x2d - bounds2d.minX) / rangeX) * (width - 2 * padding),
-        y: height - padding - ((point.y2d - bounds2d.minY) / rangeY) * (height - 2 * padding),
-      };
-    }
+    return {
+      x: padding + ((point.x2d - bounds2d.minX) / rangeX) * (width - 2 * padding),
+      y: height - padding - ((point.y2d - bounds2d.minY) / rangeY) * (height - 2 * padding),
+    };
   };
 
   return (
     <figure className="my-8 p-6 bg-white rounded-lg border border-neutral-200">
-      {/* Toggle */}
-      <div className="flex justify-center mb-4">
-        <div className="inline-flex rounded-md border border-neutral-300" role="group">
-          <button
-            onClick={() => setView("2d")}
-            className={`px-4 py-1.5 text-sm font-medium transition-colors ${
-              view === "2d"
-                ? "bg-neutral-800 text-white"
-                : "bg-white text-neutral-700 hover:bg-neutral-50"
-            } rounded-l-md`}
-          >
-            2D
-          </button>
-          <button
-            onClick={() => setView("3d")}
-            className={`px-4 py-1.5 text-sm font-medium transition-colors border-l border-neutral-300 ${
-              view === "3d"
-                ? "bg-neutral-800 text-white"
-                : "bg-white text-neutral-700 hover:bg-neutral-50"
-            } rounded-r-md`}
-          >
-            3D
-          </button>
-        </div>
-      </div>
-
-      <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto">
+      <div className="flex gap-6">
+        {/* Left: Scatter plot */}
+        <div className="flex-1">
+          <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto">
         {/* Title */}
         <text x={width / 2} y="20" textAnchor="middle" fontSize="14" fontWeight="600" fill="#0E1111" fontFamily="system-ui">
-          Token Embeddings in {is3D ? "3D" : "2D"} Space (SVD)
+          Token Embeddings in 2D Space (SVD)
         </text>
         <text x={width / 2} y="36" textAnchor="middle" fontSize="11" fill="#525252" fontFamily="system-ui">
           1000 Most Frequent Tokens, 10 K-Means Clusters
@@ -296,15 +240,17 @@ export function TokenEmbeddingDiagram() {
         {data.map((point, idx) => {
           const pos = normalizePoint(point);
           const isHovered = hoveredPoint === point;
+          const isClusterHighlighted = hoveredCluster === point.cluster;
+          const isDimmed = hoveredCluster !== null && hoveredCluster !== point.cluster;
 
           return (
             <circle
               key={idx}
               cx={pos.x}
               cy={pos.y}
-              r={isHovered ? "5" : "3.5"}
+              r={isHovered || isClusterHighlighted ? "5" : "3.5"}
               fill={CLUSTER_COLORS[point.cluster]}
-              fillOpacity={isHovered ? 1.0 : 0.7}
+              fillOpacity={isDimmed ? 0.15 : isHovered || isClusterHighlighted ? 1.0 : 0.7}
               stroke={isHovered ? "#0E1111" : "none"}
               strokeWidth={isHovered ? "1.5" : "0"}
               onMouseEnter={() => setHoveredPoint(point)}
@@ -372,8 +318,48 @@ export function TokenEmbeddingDiagram() {
           </g>
         )}
       </svg>
+        </div>
 
-      <figcaption className="mt-4 text-sm leading-relaxed text-neutral-600">
+        {/* Right: Cluster list */}
+        <div className="w-64 shrink-0">
+          <h4 className="text-sm font-semibold text-neutral-700 mb-3">Clusters</h4>
+          <div className="space-y-2">
+            {CLUSTER_DESCRIPTIONS_2D.map((description, idx) => {
+              const tokenCount = data.filter(p => p.cluster === idx).length;
+              const isHovered = hoveredCluster === idx;
+
+              return (
+                <div
+                  key={idx}
+                  onMouseEnter={() => setHoveredCluster(idx)}
+                  onMouseLeave={() => setHoveredCluster(null)}
+                  className={`p-2 rounded cursor-pointer transition-all ${
+                    isHovered ? 'bg-neutral-100 shadow-sm' : 'hover:bg-neutral-50'
+                  }`}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <div
+                      className="w-3 h-3 rounded-full shrink-0"
+                      style={{ backgroundColor: CLUSTER_COLORS[idx] }}
+                    />
+                    <span className="text-xs font-semibold text-neutral-700">
+                      Cluster {idx}
+                    </span>
+                    <span className="text-xs text-neutral-400 ml-auto">
+                      {tokenCount}
+                    </span>
+                  </div>
+                  <p className="text-xs text-neutral-600 leading-snug">
+                    {description}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      <figcaption className="mt-6 text-sm leading-relaxed text-neutral-600">
         A classic bigram model has to remember a separate rule for every specific token pair: "after <span className="font-mono text-xs">San</span> comes{" "}
         <span className="font-mono text-xs">Francisco</span>", "after <span className="font-mono text-xs">New</span> comes{" "}
         <span className="font-mono text-xs">York</span>", and so on, for all <strong>50k×50k possibilities</strong>.
