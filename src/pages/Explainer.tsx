@@ -15,19 +15,36 @@ import type { AttentionPatternsResponse, TokenInfo } from "../types";
 import NoLayerFigure from "../components/NoLayerFigure";
 
 const sections = [
-  { id: "introduction", title: "Introduction" },
-  { id: "one-attention-layer", title: "One Attention Layer" },
-  { id: "copying", title: "Copying" },
-  { id: "two-layers-induction-heads", title: "Two Layers: Induction Heads" },
-  { id: "evolution", title: "How These Circuits Evolve During Training" },
+  { id: "introduction", title: "Introduction", level: 0 },
+  { id: "no-layer-model", title: "No-Layer Model", level: 1 },
+  { id: "bigram-widget", title: "Bigram Widget", level: 1 },
+  { id: "one-attention-layer", title: "One Attention Layer", level: 0 },
+  { id: "skip-trigram", title: "Skip-Trigram Comparison", level: 1 },
+  { id: "qk-circuit", title: "QK Circuit", level: 1 },
+  { id: "ov-circuit", title: "OV Circuit", level: 1 },
+  { id: "competing-patterns", title: "Competing Patterns", level: 1 },
+  { id: "attention-explorer", title: "Attention Explorer", level: 1 },
+  { id: "copying", title: "Copying", level: 0 },
+  { id: "copying-demo", title: "Copying Behavior", level: 1 },
+  { id: "two-layers-induction-heads", title: "Two Layers: Induction Heads", level: 0 },
+  { id: "induction-comparison", title: "Induction Comparison", level: 1 },
+  { id: "prev-token-demo", title: "Previous Token Head", level: 1 },
+  { id: "induction-demo", title: "Induction Head Demo", level: 1 },
+  { id: "evolution", title: "How These Circuits Evolve During Training", level: 0 },
+  { id: "evolution-widget", title: "Evolution Widget", level: 1 },
+  { id: "gradient-force", title: "Gradient Force", level: 1 },
 ];
 
 export function Explainer() {
   const [activeSection, setActiveSection] = useState("introduction");
+  const [tocVisible, setTocVisible] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
       const scrollPosition = window.scrollY + 100;
+
+      // Show TOC after scrolling past header (roughly 200px)
+      setTocVisible(window.scrollY > 200);
 
       for (let i = sections.length - 1; i >= 0; i--) {
         const section = document.getElementById(sections[i].id);
@@ -45,46 +62,47 @@ export function Explainer() {
   return (
     <article className="min-h-screen bg-white text-neutral-900 antialiased">
       {/* Distill-style header */}
-      <header className="mx-auto max-w-5xl px-6 pt-14 pb-12">
+      <header className="mx-auto max-w-3xl px-6 pt-14 pb-12">
         <p className="text-sm tracking-widest uppercase text-neutral-500">Interp Speedrun #1</p>
         <h1 className="mt-2 font-serif text-5xl leading-tight">Toy Transformers</h1>
       </header>
 
-      {/* Main layout with sidebar */}
-      <div className="mx-auto max-w-5xl px-6 pb-24 flex gap-8">
-        {/* Table of Contents Sidebar */}
-        <aside className="hidden lg:block w-64 flex-shrink-0">
-          <div className="sticky top-24">
-            <h3 className="text-sm font-semibold text-neutral-700 mb-4 uppercase tracking-wide">
-              Contents
-            </h3>
-            <nav className="space-y-2">
-              {sections.map((section) => (
-                <a
-                  key={section.id}
-                  href={`#${section.id}`}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    document.getElementById(section.id)?.scrollIntoView({
-                      behavior: "smooth",
-                      block: "start",
-                    });
-                  }}
-                  className={`block py-1.5 px-3 text-sm rounded transition-colors ${
-                    activeSection === section.id
-                      ? "bg-blue-50 text-blue-700 font-medium border-l-2 border-blue-500 -ml-px"
-                      : "text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50"
-                  }`}
-                >
-                  {section.title}
-                </a>
-              ))}
-            </nav>
-          </div>
-        </aside>
+      {/* Table of Contents - Fixed sidebar outside main flow */}
+      <aside
+        className={`hidden xl:block fixed left-8 top-24 w-56 transition-opacity duration-300 ${
+          tocVisible ? "opacity-100" : "opacity-0 pointer-events-none"
+        }`}
+      >
+        <nav className="space-y-0.5">
+          {sections.map((section) => (
+            <a
+              key={section.id}
+              href={`#${section.id}`}
+              onClick={(e) => {
+                e.preventDefault();
+                document.getElementById(section.id)?.scrollIntoView({
+                  behavior: "smooth",
+                  block: "start",
+                });
+              }}
+              className={`block py-1 text-xs transition-colors ${
+                section.level === 1 ? "pl-4" : "pl-2"
+              } ${
+                activeSection === section.id
+                  ? "text-blue-600 font-medium border-l-2 border-blue-500 -ml-px"
+                  : "text-neutral-500 hover:text-neutral-700 border-l-2 border-transparent -ml-px"
+              } ${
+                section.level === 0 ? "font-semibold mt-2" : ""
+              }`}
+            >
+              {section.title}
+            </a>
+          ))}
+        </nav>
+      </aside>
 
-        {/* Main content */}
-        <div className="flex-1 max-w-3xl">
+      {/* Main content */}
+      <div className="mx-auto max-w-3xl px-6 pb-24">
       <figure className="pb-6">
         <img src='/toytransformer.jpg' />
         <figcaption className="text-center text-neutral-500 text-sm mt-2">Not whatever this is.</figcaption>
@@ -107,7 +125,9 @@ export function Explainer() {
            Attempt #1: what if you took out <em>all</em> the layers? Well, for one, it's not a transformer anymore: it's the on-ramp and off-ramp with nothing in between, it's just the bun of the sandwich.
           </p>
 
-      <NoLayerFigure />
+      <div id="no-layer-model">
+        <NoLayerFigure />
+      </div>
 
           {/* TODO: don't explain this, no additions until we've fixed everything else */}
           {/* <p className="text-lg leading-relaxed mt-6">
@@ -120,7 +140,7 @@ export function Explainer() {
           </p>
 
                   {/* Bigram Widget */}
-        <div className="my-12">
+        <div id="bigram-widget" className="my-12">
           <CombinedAttentionWidget
             panels={["bigram"]}
           />
@@ -148,7 +168,9 @@ export function Explainer() {
             They say attention is all you need, so let's see what that gets us. In particular, we add <em>only</em> an attention layer and <em>omit</em> the MLP layer, where the neurons of the network actually live.
           </p>
 
-          <CombinedAttentionWidget panels={["l1", "bigram"]} />
+          <div id="skip-trigram">
+            <CombinedAttentionWidget panels={["l1", "bigram"]} />
+          </div>
 
           <p className="text-lg leading-relaxed mt-6">
             The heart of the model is still the bigram transition table. But now, we're able to bias those predictions given other tokens that came before. In certain situations, we can do much better. 
@@ -170,10 +192,12 @@ export function Explainer() {
            The QK circuit (I often like to think of it as an <i>affinity matrix</i>) tells us how much a token X should care about any other token Y, based on their values. We learn this pattern over time as the network trains.
           </p>
 
-          <AttentionCircuitWidget
-            panels={["qk"]}
-            initialText="Mr and Mrs Dursley, of number four, Privet Drive, were proud to say that they were perfectly normal, thank you very much. They were the last people you'd expect to be involved in anything strange or mysterious, because they just didn't hold with such nonsense. Mr Dursley was the director of a firm called Grunnings, which made drills. He was a big, beefy man with hardly any neck, although he did have a very large moustache."
-          />
+          <div id="qk-circuit">
+            <AttentionCircuitWidget
+              panels={["qk"]}
+              initialText="Mr and Mrs Dursley, of number four, Privet Drive, were proud to say that they were perfectly normal, thank you very much. They were the last people you'd expect to be involved in anything strange or mysterious, because they just didn't hold with such nonsense. Mr Dursley was the director of a firm called Grunnings, which made drills. He was a big, beefy man with hardly any neck, although he did have a very large moustache."
+            />
+          </div>
 
           <p className="text-lg leading-relaxed mt-6">
             Certain attention patterns are easier to interpret than others, and different attention heads will learn to attend in their own ways.
@@ -189,11 +213,13 @@ export function Explainer() {
             Crucially, the OV circuit is totally independent of the QK. If I'm token X and you attend to me, I'll give you the same output regardless of your (token) identity.
           </p>
 
-          <AttentionCircuitWidget
-            panels={["ov"]}
-            initialText="The email was from Michael our new director"
-            initialTab={2}
-          />
+          <div id="ov-circuit">
+            <AttentionCircuitWidget
+              panels={["ov"]}
+              initialText="The email was from Michael our new director"
+              initialTab={2}
+            />
+          </div>
 
           <p className="text-lg leading-relaxed mt-6">
             This is an unusually spicy skip-trigram. When this head attends to the name "Michael" (or "Chris", "Andrew", "Dave", "Simon", etc) it becomes much more likely to predict a basket of words associated with leadership and seniority: CEO, manager, director, etc.
@@ -220,14 +246,18 @@ end`}
             Recall that the QK circuit and OV circuit act separately. When tokens are attended to (and thereby influence the model's next-token guess) they do not who is doing the attending. That can be tricky, because competing patterns are inevitable.
           </p>
 
-          <CompetingPatternsDemo />
+          <div id="competing-patterns">
+            <CompetingPatternsDemo />
+          </div>
 
           <p className="text-lg leading-relaxed mt-6">
             Luckily, lots of patterns are also synonyms and they <em>can</em> happily share an attention head.
             In fact, they have to. Our model has only seven attention heads, but encodes many learned features and patterns.
           </p>
 
-          <AttentionCircuitWidget />
+          <div id="attention-explorer">
+            <AttentionCircuitWidget />
+          </div>
         </section>
 
         {/* TODO: You should be able to insert any text here and we will highlight in green if the OV circuit for that token is copying */}
@@ -238,7 +268,9 @@ end`}
             Before we go though, we should look at one other behavior we see in the single-layer case: copying. The OV circuit has an entry for every token, answering the question, how should we change our logits when this token is attended to? If we attend to this token, how should that inform our guess about what's coming next? In almost all cases, the answer is, we simply boost the chances that we will see that same token again. The more interesting skip-trigrams like we investigated above are rare, relatively. We don't have to attend to any particular token, so we can use the QK circuit to learn if it actually makes sense for a previous token to come up again; if it does, we can attend to it. Having somewhat constant behavior in the OV circuit makes this coordination a little easier.
           </p>
 
-          <CopyingBehaviorDemo />
+          <div id="copying-demo">
+            <CopyingBehaviorDemo />
+          </div>
         </section>
 
         {/* Phase 6: Two-Layer Induction */}
@@ -253,7 +285,9 @@ end`}
             Now, attention heads are allowed to compose — we can run attention on the output of another attention head, and that makes things surprisingly interesting.
           </p>
           {/* TODO: add a bigram panel to this as well */}
-          <InductionComparisonWidget />
+          <div id="induction-comparison">
+            <InductionComparisonWidget />
+          </div>
 
           <p className="text-lg leading-relaxed mt-6">
             It's where we see the first glimmers of learning from context. Because what makes transformers so special, and what enables their human-like ability to chat with us and generally be useful, is their ability to reason over context. Precursors in NLP were true models of the English language (sometimes others), and <em>translation</em> was the main goal of research. They reflected how english is usually written, based on what they'd seen; that model was then frozen in time. You could say "my name is Regan" and then ask, "what's my name?" and they would not know, unless hand-coded heuristics caused the system to store that kind of information explicitly (as in Facebook's M, from the first wave of too-early chatbots that preceded the real deal). Transformers enabled crossing the chasm into what feels like a real entity, who you can tell things to, that will remember them. Let's try an easier task. We write <code className="bg-neutral-100 px-1.5 py-0.5 rounded text-sm font-mono">My name is Regan</code> 100 times, then ask the model to complete, <code className="bg-neutral-100 px-1.5 py-0.5 rounded text-sm font-mono">My name is ___</code>. Could we do this with a skip-trigram? A <em>little</em> — the token <code className="bg-neutral-100 px-1.5 py-0.5 rounded text-sm font-mono">is</code> might attend back to <code className="bg-neutral-100 px-1.5 py-0.5 rounded text-sm font-mono">name</code> and encode some vague sense that a name should follow, you could imagine seeing these logits boosted. But that information would still be sourced from a model of the English language as a whole, not the present conversation. So how do we boost the logits for "Regan" just because that's who we're talking about right now?
@@ -287,7 +321,9 @@ end`}
 
           {/* TODO: demonstrate in some way the nature of the "tag" ie writing to a subspace that doesn't affect the output */}
           {/* This demo is currently busted */}
-          <PreviousTokenHeadDemo />
+          <div id="prev-token-demo">
+            <PreviousTokenHeadDemo />
+          </div>
 
 
           <p className="text-lg leading-relaxed mt-6">
@@ -313,7 +349,9 @@ end`}
             The induction head itself can be found at layer 2. We want the output to be the token <code className="bg-neutral-100 px-1.5 py-0.5 rounded text-sm font-mono">Regan</code>. But we have no way of knowing yet which token comes next. We do know our own identity, <code className="bg-neutral-100 px-1.5 py-0.5 rounded text-sm font-mono">is</code>, so we can just ask the past! What we do is look for a "tag" that's equal to our own identity. It just so happens that <code className="bg-neutral-100 px-1.5 py-0.5 rounded text-sm font-mono">Regan</code> has such a tag. We find it, and attend to that token, so now we know that we should tilt our output guess toward <code className="bg-neutral-100 px-1.5 py-0.5 rounded text-sm font-mono">Regan</code>.
           </p>
 
-          <InductionHeadDemo />
+          <div id="induction-demo">
+            <InductionHeadDemo />
+          </div>
         </section>
 
         {/* Phase 7: Evolution (Placeholder) */}
@@ -336,8 +374,12 @@ end`}
             In our training run, we observe lockstep co-evolution rather than sequential exaptation. As you can see in the Gradient Force Widget, the induction capability and the previous-token capability rise at the exact same moment (around step 200).
           </p>
 
-          <EvolutionWidget />
-          <GradientForceWidget />
+          <div id="evolution-widget">
+            <EvolutionWidget />
+          </div>
+          <div id="gradient-force">
+            <GradientForceWidget />
+          </div>
 
           <p className="text-lg leading-relaxed mt-6">
             This happens because of backpropagation. Unlike biological natural selection, which is "blind" to future utility, a neural network's gradient signal is teleological—it allows future needs to reach back in time (or rather, back through the layers) to construct necessary components.
@@ -351,7 +393,6 @@ end`}
             This creates a massive, direct evolutionary pressure—let's call it "Gradient Bullying"—where the downstream induction head forces the upstream head to become a "Previous Token Head" specifically to serve the induction circuit. The upstream organ didn't evolve randomly; it was built to order.
           </p>
         </section>
-        </div>
       </div>
     </article>
   );
