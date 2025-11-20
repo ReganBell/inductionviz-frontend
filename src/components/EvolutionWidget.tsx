@@ -44,8 +44,8 @@ const HEAD_COLORS: Record<number, string> = {
 export function EvolutionWidget() {
   const [data, setData] = useState<TrainingData | null>(null);
   const [currentStepIdx, setCurrentStepIdx] = useState(0);
-  const [selectedPrevHead, setSelectedPrevHead] = useState<string>("L0H1");
-  const [selectedIndHead, setSelectedIndHead] = useState<string>("L1H6");
+  const [selectedPrevHead, setSelectedPrevHead] = useState<string>("L0H5");
+  const [selectedIndHead, setSelectedIndHead] = useState<string>("L1H0");
   const [isPlaying, setIsPlaying] = useState(false);
 
   // Load training data
@@ -366,7 +366,7 @@ export function EvolutionWidget() {
         <div className="mt-4 text-xs text-gray-500">
           Blue lines show Q-composition strength (how much L1 relies on L0).
           <span className="text-pink-600 font-semibold"> Pink = selected circuit</span>.
-          <strong> Strongest prev-tok heads: L0H1 (15.2%), L0H7 (7.0%)</strong>
+          <strong> Strongest prev-tok heads: L0H5 (23.0%), L0H4 (17.2%)</strong>
         </div>
       </div>
 
@@ -534,7 +534,7 @@ export function EvolutionWidget() {
               Previous Token Head (Layer 0)
             </div>
             <div className="flex gap-2">
-              {["L0H1", "L0H7", "L0H3"].map((head) => (
+              {["L0H5", "L0H4", "L0H3"].map((head) => (
                 <button
                   key={head}
                   onClick={() => setSelectedPrevHead(head)}
@@ -554,11 +554,21 @@ export function EvolutionWidget() {
             <div className="text-sm font-semibold text-gray-700 mb-2">
               Induction Head (Layer 1)
             </div>
-            <button
-              className="px-3 py-1 text-sm rounded bg-purple-100 text-purple-900 border-2 border-purple-500"
-            >
-              {selectedIndHead}
-            </button>
+            <div className="flex gap-2">
+              {["L1H0", "L1H6", "L1H7"].map((head) => (
+                <button
+                  key={head}
+                  onClick={() => setSelectedIndHead(head)}
+                  className={`px-3 py-1 text-sm rounded transition-colors ${
+                    selectedIndHead === head
+                      ? "bg-purple-100 text-purple-900 border-2 border-purple-500"
+                      : "bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200"
+                  }`}
+                >
+                  {head}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </div>
