@@ -9,30 +9,90 @@ import { InductionHeadDemo } from "../components/InductionHeadDemo";
 import { InductionComparisonWidget } from "../components/InductionComparisonWidget";
 import { EvolutionWidget } from "../components/EvolutionWidget";
 import { TokenEmbeddingDiagram } from "../components/TokenEmbeddingDiagram";
+import { GradientForceWidget } from "../components/GradientForceWidget";
 import { API_URL } from "../config";
 import type { AttentionPatternsResponse, TokenInfo } from "../types";
 import NoLayerFigure from "../components/NoLayerFigure";
 
+const sections = [
+  { id: "introduction", title: "Introduction" },
+  { id: "one-attention-layer", title: "One Attention Layer" },
+  { id: "copying", title: "Copying" },
+  { id: "two-layers-induction-heads", title: "Two Layers: Induction Heads" },
+  { id: "evolution", title: "How These Circuits Evolve During Training" },
+];
+
 export function Explainer() {
+  const [activeSection, setActiveSection] = useState("introduction");
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollPosition = window.scrollY + 100;
+
+      for (let i = sections.length - 1; i >= 0; i--) {
+        const section = document.getElementById(sections[i].id);
+        if (section && section.offsetTop <= scrollPosition) {
+          setActiveSection(sections[i].id);
+          break;
+        }
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   return (
     <article className="min-h-screen bg-white text-neutral-900 antialiased">
       {/* Distill-style header */}
-      <header className="mx-auto max-w-3xl px-6 pt-14 pb-12">
+      <header className="mx-auto max-w-5xl px-6 pt-14 pb-12">
         <p className="text-sm tracking-widest uppercase text-neutral-500">Interp Speedrun #1</p>
         <h1 className="mt-2 font-serif text-5xl leading-tight">Toy Transformers</h1>
       </header>
 
-      {/* Main content */}
-      <div className="mx-auto max-w-3xl px-6 pb-24">
+      {/* Main layout with sidebar */}
+      <div className="mx-auto max-w-5xl px-6 pb-24 flex gap-8">
+        {/* Table of Contents Sidebar */}
+        <aside className="hidden lg:block w-64 flex-shrink-0">
+          <div className="sticky top-24">
+            <h3 className="text-sm font-semibold text-neutral-700 mb-4 uppercase tracking-wide">
+              Contents
+            </h3>
+            <nav className="space-y-2">
+              {sections.map((section) => (
+                <a
+                  key={section.id}
+                  href={`#${section.id}`}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    document.getElementById(section.id)?.scrollIntoView({
+                      behavior: "smooth",
+                      block: "start",
+                    });
+                  }}
+                  className={`block py-1.5 px-3 text-sm rounded transition-colors ${
+                    activeSection === section.id
+                      ? "bg-blue-50 text-blue-700 font-medium border-l-2 border-blue-500 -ml-px"
+                      : "text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50"
+                  }`}
+                >
+                  {section.title}
+                </a>
+              ))}
+            </nav>
+          </div>
+        </aside>
+
+        {/* Main content */}
+        <div className="flex-1 max-w-3xl">
       <figure className="pb-6">
         <img src='/toytransformer.jpg' />
-        <figcaption className="text-center text-neutral-500 text-sm mt-2">Not this kind.</figcaption>
+        <figcaption className="text-center text-neutral-500 text-sm mt-2">Not whatever this is.</figcaption>
       </figure>
 
 
         {/* Introduction */}
-        <section className="prose prose-neutral max-w-none">
+        <section id="introduction" className="prose prose-neutral max-w-none">
           <p className="text-lg leading-relaxed">
             {/* why this paper? it's the first real mechinterp paper *on transformers* -- there were others on CNNs etc before */}
             Let's walk through <a href="https://transformer-circuits.pub/2021/framework/index.html" className="underline">A Mathematical Framework for Transformer Circuits</a>. I think this paper is where the term "mechanistic interpretability" actually comes from. <br></br> <small className="text-neutral-600">(edit: found it on a podcast with Chris a <a href="https://80000hours.org/podcast/episodes/chris-olah-interpretability-research" className="underline">few months before</a>, and it was hinted at back in the <a href="https://distill.pub/2020/circuits/zoom-in/" className="underline">Distill days</a>)</small>
@@ -81,7 +141,7 @@ export function Explainer() {
 
 
         {/* Continue with single attention layer */}
-        <section className="prose prose-neutral max-w-none mt-12">
+        <section id="one-attention-layer" className="prose prose-neutral max-w-none mt-12">
           <h2 className="font-serif text-3xl mt-12 mb-6">One Attention Layer</h2>
 
           <p className="text-lg leading-relaxed">
@@ -171,7 +231,7 @@ end`}
         </section>
 
         {/* TODO: You should be able to insert any text here and we will highlight in green if the OV circuit for that token is copying */}
-        <section className="prose prose-neutral max-w-none mt-12">
+        <section id="copying" className="prose prose-neutral max-w-none mt-12">
           <h2 className="font-serif text-3xl mt-12 mb-6">Copying</h2>
 
           <p className="text-lg leading-relaxed mt-6">
@@ -182,7 +242,7 @@ end`}
         </section>
 
         {/* Phase 6: Two-Layer Induction */}
-        <section className="prose prose-neutral max-w-none mt-12">
+        <section id="two-layers-induction-heads" className="prose prose-neutral max-w-none mt-12">
           <h2 className="font-serif text-3xl mt-12 mb-6">Two Layers: Induction Heads</h2>
 
           <p className="text-lg leading-relaxed">
@@ -257,24 +317,42 @@ end`}
         </section>
 
         {/* Phase 7: Evolution (Placeholder) */}
-        <section className="prose prose-neutral max-w-none mt-12">
+        <section id="evolution" className="prose prose-neutral max-w-none mt-12">
           <h2 className="font-serif text-3xl mt-12 mb-6">How These Circuits Evolve During Training</h2>
 
           <p className="text-lg leading-relaxed">
-          What’s most interesting about this, I think, is that it’s a case of evolutionary exaptation. We can’t start growing an induction head without signal from a previous token head to latch onto. The thing is, we can’t build a previous token head just because — we promise! — one day it’ll be useful to have. As in biological evolution, it needs to be useful on its own to continue to exist in the face of loss landscape optimization. Luckily, it *is* useful — repeated characters are common enough (think `!!` or `??` ) that warping our language model to slightly boost our prediction of the same character recurring will lower loss by itself. Interestingly, you might think there’s an incentive to have this prediction be “legible” initially, but “hidden” in an orthogonal subspace later, once the induction head is at work (maybe?).
+            Initially, this struck me as a classic case of evolutionary exaptation: that's when, in biological evolution, a trait evolves for one purpose (like feathers for insulation) and is later co-opted for a completely different function (flight).
+          </p>
 
-The evolutionary analog is really interesting, and definitely makes me wonder if there are selfish-gene-style effects at work — you could imagine circuit types that somehow establish themselves and prevent the network from functioning without them and yet also are not optimal with respect to the loss landscape.          </p>
+          <p className="text-lg leading-relaxed mt-6">
+            My original hypothesis was that the "Previous Token Head" (upstream) would have to evolve first—perhaps to serve a simple utility like predicting double-characters (<code className="bg-neutral-100 px-1.5 py-0.5 rounded text-sm font-mono">!!</code> or <code className="bg-neutral-100 px-1.5 py-0.5 rounded text-sm font-mono">??</code>)—and only after it was established could the "Induction Head" (downstream) latch onto it to build a complex copy-paste circuit. In a biological system, you'd expect to see hysteresis: a lag where the upstream feature exists for a while before the downstream function emerges.
+          </p>
+
+          <p className="text-lg leading-relaxed mt-6">
+            It turns out, however, that things work differently when the system is differentiable end-to-end.
+          </p>
+
+          <p className="text-lg leading-relaxed mt-6">
+            In our training run, we observe lockstep co-evolution rather than sequential exaptation. As you can see in the Gradient Force Widget, the induction capability and the previous-token capability rise at the exact same moment (around step 200).
+          </p>
 
           <EvolutionWidget />
-        </section>
-      </div>
+          <GradientForceWidget />
 
-      {/* Footer */}
-      <footer className="mx-auto max-w-3xl px-6 pb-16 pt-12 border-t border-neutral-200">
-        <p className="text-sm text-neutral-500">
-          This is an interactive explainer based on mechanistic interpretability research.
-        </p>
-      </footer>
+          <p className="text-lg leading-relaxed mt-6">
+            This happens because of backpropagation. Unlike biological natural selection, which is "blind" to future utility, a neural network's gradient signal is teleological—it allows future needs to reach back in time (or rather, back through the layers) to construct necessary components.
+          </p>
+
+          <p className="text-lg leading-relaxed mt-6">
+            When the model fails to predict a token like "Regan", the error generates a gradient that flows through the Induction Head (Layer 1) and hits the Source Head (Layer 0). It effectively tells the Layer 0 head: "I could have solved this if you had told me what the previous token was."
+          </p>
+
+          <p className="text-lg leading-relaxed mt-6">
+            This creates a massive, direct evolutionary pressure—let's call it "Gradient Bullying"—where the downstream induction head forces the upstream head to become a "Previous Token Head" specifically to serve the induction circuit. The upstream organ didn't evolve randomly; it was built to order.
+          </p>
+        </section>
+        </div>
+      </div>
     </article>
   );
 }
