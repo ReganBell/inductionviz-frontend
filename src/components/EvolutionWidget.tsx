@@ -151,7 +151,7 @@ export function EvolutionWidget() {
 
         {/* Loss curve background */}
         <div className="relative h-24 mb-4">
-          <svg className="w-full h-full" preserveAspectRatio="none">
+          <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
             {/* Loss curve */}
             <polyline
               points={points}
@@ -163,9 +163,9 @@ export function EvolutionWidget() {
 
             {/* Current position indicator */}
             <line
-              x1={`${currentX}%`}
+              x1={currentX}
               y1="0"
-              x2={`${currentX}%`}
+              x2={currentX}
               y2="100"
               stroke="#3B82F6"
               strokeWidth="2"
