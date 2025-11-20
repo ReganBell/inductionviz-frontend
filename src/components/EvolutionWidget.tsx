@@ -96,6 +96,37 @@ export function EvolutionWidget() {
   const minLoss = Math.min(...validLosses);
   const maxLoss = Math.max(...validLosses);
 
+  // Compute the SVG-friendly "points" string for the loss curve polyline.
+  // - For each training step, we:
+  //   1. Compute the relative x position (as a percentage) based on the step number.
+  //   2. Discard steps where loss is null/undefined.
+  //   3. Compute y position (scaled so lower loss is higher up: 100 -> 20, reserving top 20% for min loss).
+  //   4. Output as a comma-separated x,y string suitable for <polyline points="">.
+  // - The curve thus traces normalized (step, loss) over training.
+  const points = data.steps
+    .map((step, idx) => {
+      // X position: normalized from 0 to 100
+      const x = ((step - data.steps[0]) / (data.steps[data.steps.length - 1] - data.steps[0])) * 100;
+      // Get the loss for this step
+      const loss = data.loss[idx];
+      // Filter out missing/infinite losses
+      if (loss === null || loss === undefined) return null;
+      // Y position: normalized, but with lower loss higher up (in SVG)
+      // Range is [100 (bottom), 20 (top)]
+      const y = 100 - ((loss - minLoss) / (maxLoss - minLoss)) * 80;
+      // Format as "x,y"
+      return `${x},${y}`;
+    })
+    .filter(Boolean) // Remove invalid (null) points
+    .join(" ");
+
+    console.log(points)
+    console.log({ steps: data.steps })
+
+    const stepDiff = (currentStep - data.steps[0]);
+    const stepDiffMax = data.steps[data.steps.length - 1] - data.steps[0];
+    const currentX = (stepDiff / stepDiffMax) * 100
+
   return (
     <div className="my-12 p-8 bg-gray-50 rounded-lg border border-gray-200">
       <div className="mb-6 text-center">
@@ -123,16 +154,7 @@ export function EvolutionWidget() {
           <svg className="w-full h-full" preserveAspectRatio="none">
             {/* Loss curve */}
             <polyline
-              points={data.steps
-                .map((step, idx) => {
-                  const x = ((step - data.steps[0]) / (data.steps[data.steps.length - 1] - data.steps[0])) * 100;
-                  const loss = data.loss[idx];
-                  if (loss === null || loss === undefined) return null;
-                  const y = 100 - ((loss - minLoss) / (maxLoss - minLoss)) * 80;
-                  return `${x},${y}`;
-                })
-                .filter(Boolean)
-                .join(" ")}
+              points={points}
               fill="none"
               stroke="#93C5FD"
               strokeWidth="2"
@@ -141,9 +163,9 @@ export function EvolutionWidget() {
 
             {/* Current position indicator */}
             <line
-              x1={`${((currentStep - data.steps[0]) / (data.steps[data.steps.length - 1] - data.steps[0])) * 100}%`}
+              x1={`${currentX}%`}
               y1="0"
-              x2={`${((currentStep - data.steps[0]) / (data.steps[data.steps.length - 1] - data.steps[0])) * 100}%`}
+              x2={`${currentX}%`}
               y2="100"
               stroke="#3B82F6"
               strokeWidth="2"
@@ -165,8 +187,8 @@ export function EvolutionWidget() {
           className="w-full h-2 bg-blue-100 rounded-lg appearance-none cursor-pointer"
           style={{
             background: `linear-gradient(to right, #3B82F6 0%, #3B82F6 ${
-              ((currentStep - data.steps[0]) / (data.steps[data.steps.length - 1] - data.steps[0])) * 100
-            }%, #DBEAFE ${((currentStep - data.steps[0]) / (data.steps[data.steps.length - 1] - data.steps[0])) * 100}%, #DBEAFE 100%)`,
+              currentX
+            }%, #DBEAFE ${currentX}%, #DBEAFE 100%)`,
           }}
         />
 
@@ -390,17 +412,18 @@ export function EvolutionWidget() {
           </h4>
 
           <div className="relative h-48 mb-2">
-            <svg className="w-full h-full">
+            <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
               {/* Grid lines */}
               {[0, 0.25, 0.5, 0.75, 1.0].map((y) => (
                 <line
                   key={y}
                   x1="0"
-                  y1={`${(1 - y) * 100}%`}
-                  x2="100%"
-                  y2={`${(1 - y) * 100}%`}
+                  y1={(1 - y) * 100}
+                  x2="100"
+                  y2={(1 - y) * 100}
                   stroke="#E5E7EB"
-                  strokeWidth="1"
+                  strokeWidth="0.5"
+                  vectorEffect="non-scaling-stroke"
                 />
               ))}
 
@@ -422,9 +445,9 @@ export function EvolutionWidget() {
 
               {/* Current position */}
               <circle
-                cx={`${((currentStep - data.steps[0]) / (data.steps[data.steps.length - 1] - data.steps[0])) * 100}%`}
-                cy={`${(1 - currentPrevTok) * 100}%`}
-                r="4"
+                cx={((currentStep - data.steps[0]) / (data.steps[data.steps.length - 1] - data.steps[0])) * 100}
+                cy={(1 - currentPrevTok) * 100}
+                r="1"
                 fill="#10B981"
               />
             </svg>
@@ -443,17 +466,18 @@ export function EvolutionWidget() {
           </h4>
 
           <div className="relative h-48 mb-2">
-            <svg className="w-full h-full">
+            <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
               {/* Grid lines */}
               {[0, 0.25, 0.5, 0.75, 1.0].map((y) => (
                 <line
                   key={y}
                   x1="0"
-                  y1={`${(1 - y) * 100}%`}
-                  x2="100%"
-                  y2={`${(1 - y) * 100}%`}
+                  y1={(1 - y) * 100}
+                  x2="100"
+                  y2={(1 - y) * 100}
                   stroke="#E5E7EB"
-                  strokeWidth="1"
+                  strokeWidth="0.5"
+                  vectorEffect="non-scaling-stroke"
                 />
               ))}
 
@@ -475,9 +499,9 @@ export function EvolutionWidget() {
 
               {/* Current position */}
               <circle
-                cx={`${((currentStep - data.steps[0]) / (data.steps[data.steps.length - 1] - data.steps[0])) * 100}%`}
-                cy={`${(1 - currentInduction) * 100}%`}
-                r="4"
+                cx={((currentStep - data.steps[0]) / (data.steps[data.steps.length - 1] - data.steps[0])) * 100}
+                cy={(1 - currentInduction) * 100}
+                r="1"
                 fill="#8B5CF6"
               />
             </svg>
