@@ -8,6 +8,7 @@ interface TrainingData {
     [key: string]: {
       prev_tok: number[];
       induction: number[];
+      induction_test: number[];
       layer: number;
       head: number;
     };
@@ -23,6 +24,9 @@ interface TrainingData {
       prev_tok: number;
       induction: number;
     };
+  };
+  final_induction_test: {
+    [key: string]: number;
   };
 }
 
@@ -85,7 +89,7 @@ export function EvolutionWidget() {
   const indHeadMetrics = data.heads[selectedIndHead];
 
   const currentPrevTok = prevHeadMetrics?.prev_tok[currentStepIdx] || 0;
-  const currentInduction = indHeadMetrics?.induction[currentStepIdx] || 0;
+  const currentInduction = indHeadMetrics?.induction_test[currentStepIdx] || 0;
 
   // Get composition score between selected heads
   const compositionKey = `${selectedIndHead}_${selectedPrevHead}`;
@@ -334,7 +338,7 @@ export function EvolutionWidget() {
                     width: "48px",
                     height: "48px",
                   }}
-                  title={`L1H${head} - induction: ${(data.heads[headKey].induction[currentStepIdx] * 100).toFixed(0)}%`}
+                  title={`L1H${head} - induction test: ${(data.heads[headKey].induction_test[currentStepIdx] * 100).toFixed(0)}%`}
                 >
                   <div
                     className={`w-full h-full rounded-full flex items-center justify-center text-xs font-semibold transition-all ${
@@ -462,7 +466,7 @@ export function EvolutionWidget() {
         {/* Induction Head Evolution */}
         <div className="bg-white p-6 rounded-lg border border-gray-200">
           <h4 className="text-sm font-semibold text-gray-700 mb-4">
-            {selectedIndHead} Induction Score
+            {selectedIndHead} Induction Test ("My name is Regan..." → 'Reg')
           </h4>
 
           <div className="relative h-48 mb-2">
@@ -486,7 +490,7 @@ export function EvolutionWidget() {
                 points={data.steps
                   .map((step, idx) => {
                     const x = ((step - data.steps[0]) / (data.steps[data.steps.length - 1] - data.steps[0])) * 100;
-                    const score = indHeadMetrics.induction[idx];
+                    const score = indHeadMetrics.induction_test[idx];
                     const y = (1 - score) * 100;
                     return `${x},${y}`;
                   })
@@ -509,7 +513,7 @@ export function EvolutionWidget() {
 
           <div className="text-center text-sm text-gray-600">
             Current: <strong>{(currentInduction * 100).toFixed(1)}%</strong> →
-            Final: <strong>{(data.final_head_scores[selectedIndHead].induction * 100).toFixed(1)}%</strong>
+            Final: <strong>{(data.final_induction_test[selectedIndHead] * 100).toFixed(1)}%</strong>
           </div>
         </div>
       </div>
