@@ -6,11 +6,83 @@ interface TokenData {
   id: number;
 }
 
+interface Prediction {
+  token: string;
+  prob?: number;
+  logit?: number;
+}
+
+interface PredictionPanelProps {
+  title?: string;
+  showTitle: boolean;
+  predictions: Prediction[] | null;
+  emptyMessage: string;
+  barColor: string;
+  useProb?: boolean;
+}
+
+function PredictionPanel({
+  title,
+  showTitle,
+  predictions,
+  emptyMessage,
+  barColor,
+  useProb = true,
+}: PredictionPanelProps) {
+  return (
+    <div className="bg-white p-6 rounded-lg border border-gray-200">
+      {showTitle && title && (
+        <h4 className="text-sm font-semibold text-gray-700 mb-4 text-center">
+          {title}
+        </h4>
+      )}
+      {predictions ? (
+        <div className="space-y-1">
+          {predictions.map((pred, i) => {
+            const value = useProb ? pred.prob : pred.logit;
+            const allValues = useProb
+              ? predictions.map(p => p.prob).filter((v): v is number => v !== undefined)
+              : predictions.map(p => p.logit).filter((v): v is number => v !== undefined);
+            const maxValue = Math.max(...allValues);
+            const width = maxValue > 0 && value !== undefined ? (value / maxValue) * 100 : 0;
+
+            return (
+              <div key={i} className="flex items-center gap-3 py-0.5">
+                <div className="w-24 shrink-0 font-mono text-sm text-neutral-800">
+                  {pred.token}
+                </div>
+                <div className="flex-1 max-w-md">
+                  <div className="h-2 rounded-sm bg-neutral-100">
+                    <div
+                      className={`h-2 rounded-sm ${barColor} transition-all duration-300`}
+                      style={{ width: `${width}%` }}
+                    />
+                  </div>
+                </div>
+                <div className="w-16 shrink-0 font-mono text-xs tabular-nums text-neutral-500">
+                  {useProb
+                    ? value !== undefined ? `${(value * 100).toFixed(2)}%` : ""
+                    : value !== undefined ? value.toFixed(2) : ""}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="text-gray-400 text-sm text-center py-8">
+          {emptyMessage}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function InductionHeadDemo() {
   const [text] = useState("My name is Regan. My name is");
   const [tokens, setTokens] = useState<TokenData[]>([]);
-  const [attention, setAttention] = useState<number[][][]>([]);
-  const [ovPredictions, setOVPredictions] = useState<any[][][]>([]);
+  const [hoveredTokenIdx, setHoveredTokenIdx] = useState<number | null>(null);
+  const [attention, setAttention] = useState<number[][][][]>([]); // [position][layer][head][src_position]
+  const [fullPredictions, setFullPredictions] = useState<Array<Array<{ token: string; id: number; prob: number }>>>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -24,8 +96,6 @@ export function InductionHeadDemo() {
             model_name: "t2",
             layers: [1],
             heads: [7], // Induction head
-            compute_ov: true,
-            normalize_ov: false,
           }),
         });
 
@@ -34,7 +104,7 @@ export function InductionHeadDemo() {
         const data = await response.json();
         setTokens(data.tokens);
         setAttention(data.attention || []);
-        setOVPredictions(data.ov_predictions || []);
+        setFullPredictions(data.full_predictions || []);
         setLoading(false);
       } catch (err) {
         console.error("Error fetching data:", err);
@@ -45,6 +115,41 @@ export function InductionHeadDemo() {
     fetchData();
   }, [text]);
 
+  // Determine active token index: use hovered token if available, otherwise use last token
+  const activeTokenIdx = hoveredTokenIdx !== null 
+    ? hoveredTokenIdx 
+    : tokens.length > 0 
+      ? tokens.length - 1 
+      : null;
+
+  // Get predictions for active token
+  const activePredictions = activeTokenIdx !== null && fullPredictions.length > activeTokenIdx
+    ? fullPredictions[activeTokenIdx].map(p => ({ token: p.token, prob: p.prob }))
+    : null;
+
+  // Get attention weights for the active token
+  // attention data structure: [position][layer][head][src_position]
+  // Position 0 has no attention (it's the first token), so position 1 is at index 0
+  // Since we requested layers: [1] and heads: [7], they're at index [0][0] in the response
+  const attentionWeights: number[] | null = activeTokenIdx !== null &&
+    activeTokenIdx > 0 &&
+    attention.length > activeTokenIdx - 1 &&
+    attention[activeTokenIdx - 1] &&
+    attention[activeTokenIdx - 1][0] &&
+    attention[activeTokenIdx - 1][0][0]
+      ? attention[activeTokenIdx - 1][0][0] // first requested layer (1), first requested head (7)
+      : null;
+
+  // Find the most attended token (excluding BOS token at index 0)
+  const maxAttendedIdx = attentionWeights && Array.isArray(attentionWeights)
+    ? attentionWeights.reduce((maxIdx, weight, idx) => {
+        // Exclude BOS token (index 0)
+        if (idx === 0) return maxIdx;
+        if (maxIdx === null || weight > attentionWeights[maxIdx]) return idx;
+        return maxIdx;
+      }, null as number | null)
+    : null;
+
   if (loading) {
     return (
       <div className="my-8 p-6 bg-gray-50 rounded-lg border border-gray-200">
@@ -53,217 +158,116 @@ export function InductionHeadDemo() {
     );
   }
 
-  // Looking at the last token (second "is" at position 9)
-  const queryTokenIdx = tokens.length - 1; // Second "is"
-
-  // Get attention pattern for the query token
-  const attentionPattern = attention[queryTokenIdx - 1]?.[0]?.[0]; // layer 1, head 7
-
-  // Find which token is attended to most (should be first "Regan")
-  const attendedTokenIdx = attentionPattern
-    ? attentionPattern.indexOf(Math.max(...attentionPattern))
-    : null;
-
-  // Get OV predictions for the attended token
-  const ovPreds = attendedTokenIdx !== null && ovPredictions[attendedTokenIdx]?.[0]?.[0]
-    ? ovPredictions[attendedTokenIdx][0][0]
-    : null;
-
-  // Find first and second occurrences of "is"
-  const firstIsIdx = tokens.findIndex(t => t.text === " is");
-  const secondIsIdx = tokens.slice(firstIsIdx + 1).findIndex(t => t.text === " is") + firstIsIdx + 1;
-
-  // The token after first "is" should be what we predict (Regan)
-  const expectedNextToken = firstIsIdx >= 0 && firstIsIdx + 1 < tokens.length
-    ? tokens[firstIsIdx + 1]
-    : null;
-
   return (
-    <figure className="my-8 p-6 bg-gray-50 rounded-lg border border-gray-200">
-      <figcaption className="text-sm font-semibold text-gray-700 mb-4 text-center">
-        Induction Head (Layer 1, Head 7)
-      </figcaption>
-
-      <div className="mb-4 text-sm text-gray-600 text-center">
-        Observing how the induction head completes the repeated pattern
+    <div className="my-12 p-8 bg-gray-50 rounded-lg border border-gray-200">
+      <div className="mb-6 text-center">
+        <h3 className="text-xl font-semibold text-gray-900">
+          Induction Head (Layer 1, Head 7)
+        </h3>
+        <p className="text-sm text-gray-600 mt-1">
+          Hover over a token to see what the induction head predicts will come next
+        </p>
+        <p className="text-xs text-gray-500 mt-2">
+          Pattern: <span className="font-semibold">"My name is"</span> repeats, what comes next?
+        </p>
       </div>
 
-      {/* Token strip with pattern highlighting */}
-      <div className="mb-6 bg-white p-4 rounded-lg border border-gray-200">
-        <div className="text-xs text-gray-500 mb-2">
-          Pattern: <span className="font-semibold">My name is</span> repeats, what comes next?
-        </div>
-        <div className="font-mono text-sm" style={{ lineHeight: 1.8 }}>
-          {tokens.map((token, idx) => {
-            const isQuery = idx === queryTokenIdx;
-            const isAttended = attendedTokenIdx === idx;
-            const isFirstIs = idx === firstIsIdx;
-            const isExpectedNext = expectedNextToken && idx === firstIsIdx + 1;
+      {/* Token strip */}
+      {tokens.length > 0 && (
+        <>
+          <div className="mb-2 bg-white p-4 rounded-lg border border-gray-200">
+            <div style={{ lineHeight: 1.8, wordBreak: "break-word", userSelect: "none" }}>
+            {tokens.map((token, idx) => {
+              // Calculate background color based on attention weight
+              let bgColor = "";
+              let borderStyle = "";
 
-            return (
-              <span
-                key={idx}
-                className={`px-1 py-0.5 transition-colors ${
-                  idx === 0
-                    ? "text-gray-400"
-                    : isQuery
-                    ? "bg-blue-200 border-b-2 border-blue-500"
-                    : isAttended
-                    ? "bg-amber-200 border-b-2 border-amber-500"
-                    : isFirstIs
-                    ? "bg-green-100 border-b border-dashed border-green-400"
-                    : isExpectedNext
-                    ? "bg-pink-100 border-b border-dashed border-pink-400"
-                    : ""
-                }`}
-              >
-                {token.text}
-              </span>
-            );
-          })}
-        </div>
-        <div className="mt-2 flex flex-wrap gap-3 text-xs">
-          <div className="flex items-center gap-1">
-            <span className="inline-block w-3 h-3 bg-blue-200 border border-blue-500"></span>
-            <span>Query: second "is"</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <span className="inline-block w-3 h-3 bg-green-100 border border-dashed border-green-400"></span>
-            <span>First "is" (pattern match)</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <span className="inline-block w-3 h-3 bg-pink-100 border border-dashed border-pink-400"></span>
-            <span>What came after first "is"</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <span className="inline-block w-3 h-3 bg-amber-200 border border-amber-500"></span>
-            <span>Attended token</span>
-          </div>
-        </div>
-      </div>
+              if (hoveredTokenIdx === idx) {
+                // The hovered token itself
+                bgColor = "bg-blue-200";
+                borderStyle = "border-b-2 border-blue-500";
+              } else if (activeTokenIdx === idx && hoveredTokenIdx === null) {
+                // The active (last) token when not hovering
+                bgColor = "bg-blue-100";
+                borderStyle = "border-b-2 border-blue-400";
+              } else if (attentionWeights && Array.isArray(attentionWeights) && idx < attentionWeights.length) {
+                // Source token that is being attended to
+                const weight = attentionWeights[idx];
+                const opacity = Math.min(weight * 5, 1); // Scale up for visibility
+                const isMaxAttended = idx === maxAttendedIdx;
+                bgColor = isMaxAttended ? "bg-amber-200" : "bg-green-300";
+                borderStyle = isMaxAttended ? "border-b-2 border-amber-500" : "border-b-2 border-green-500";
+                return (
+                  <span
+                    key={idx}
+                    onMouseEnter={() => setHoveredTokenIdx(idx)}
+                    onMouseLeave={() => setHoveredTokenIdx(null)}
+                    className={`px-1 py-0.5 cursor-pointer transition-colors hover:bg-gray-100 ${borderStyle}`}
+                    style={{ backgroundColor: isMaxAttended 
+                      ? "rgba(251, 191, 36, 0.6)" 
+                      : `rgba(134, 239, 172, ${opacity})` }}
+                    title={`Attention: ${(weight * 100).toFixed(1)}%`}
+                  >
+                    {token.text || "␠"}
+                  </span>
+                );
+              } else {
+                // Default non-attended token
+                bgColor = "hover:bg-gray-100";
+                borderStyle = "border-b border-dashed border-gray-300";
+              }
 
-      {/* Visualization */}
-      {attentionPattern && attendedTokenIdx !== null && (
-        <div className="grid md:grid-cols-2 gap-4">
-          {/* Left: QK Circuit */}
-          <div className="bg-white p-4 rounded-lg border border-gray-200">
-            <h4 className="text-sm font-semibold text-gray-700 mb-3">QK Circuit (Finding the Pattern)</h4>
-
-            <div className="space-y-2 text-sm mb-4">
-              <div className="flex items-center gap-2">
-                <span className="text-gray-600 w-20">Query:</span>
-                <code className="bg-blue-100 px-2 py-0.5 rounded font-mono">
-                  {tokens[queryTokenIdx].text}
-                </code>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-gray-600 w-20">Looking for:</span>
-                <span className="text-gray-700">Tokens "tagged" with {tokens[queryTokenIdx].text}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-gray-600 w-20">Found:</span>
-                <code className="bg-amber-100 px-2 py-0.5 rounded font-mono">
-                  {tokens[attendedTokenIdx].text}
-                </code>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-gray-600 w-20">Weight:</span>
-                <span className="font-mono text-gray-700">
-                  {attentionPattern[attendedTokenIdx].toFixed(3)}
+              return (
+                <span
+                  key={idx}
+                  onMouseEnter={() => setHoveredTokenIdx(idx)}
+                  onMouseLeave={() => setHoveredTokenIdx(null)}
+                  className={`px-1 py-0.5 cursor-pointer transition-colors ${bgColor} ${borderStyle}`}
+                >
+                  {token.text || "␠"}
                 </span>
-              </div>
+              );
+            })}
             </div>
-
-            <div className="pt-3 border-t border-gray-200">
-              <div className="text-xs text-gray-500 mb-2">Attention distribution:</div>
-              <div className="space-y-1">
-                {tokens.slice(0, queryTokenIdx + 1).map((tok, idx) => {
-                  const weight = attentionPattern[idx];
-                  const maxWeight = Math.max(...attentionPattern);
-                  const width = maxWeight > 0 ? (weight / maxWeight) * 100 : 0;
-
-                  return (
-                    <div key={idx} className="flex items-center gap-2">
-                      <div className="w-16 text-xs font-mono truncate">{tok.text}</div>
-                      <div className="flex-1">
-                        <div className="h-1.5 rounded-sm bg-neutral-100">
-                          <div
-                            className="h-1.5 rounded-sm bg-amber-400"
-                            style={{ width: `${width}%` }}
-                          />
-                        </div>
-                      </div>
-                      <div className="w-12 text-xs font-mono text-gray-500">
-                        {(weight * 100).toFixed(0)}%
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-
-          {/* Right: OV Circuit */}
-          <div className="bg-white p-4 rounded-lg border border-gray-200">
-            <h4 className="text-sm font-semibold text-gray-700 mb-3">OV Circuit (Prediction)</h4>
-
-            <div className="mb-4 text-sm text-gray-600">
-              Having attended to <code className="bg-amber-100 px-1 rounded font-mono">{tokens[attendedTokenIdx].text}</code>,
-              the OV circuit boosts these tokens for the next prediction:
-            </div>
-
-            {ovPreds && expectedNextToken && (
-              <div className="space-y-1">
-                {ovPreds.slice(0, 10).map((pred: any, i: number) => {
-                  const maxLogit = Math.abs(ovPreds[0].logit);
-                  const width = maxLogit > 0 ? (Math.abs(pred.logit) / maxLogit) * 100 : 0;
-                  const isExpected = pred.token === expectedNextToken.text;
-
-                  return (
-                    <div key={i} className="flex items-center gap-2">
-                      <div className="w-20 shrink-0 font-mono text-xs text-neutral-800 flex items-center gap-1">
-                        {pred.token}
-                        {isExpected && (
-                          <span className="text-[10px] text-pink-600">★</span>
-                        )}
-                      </div>
-                      <div className="flex-1">
-                        <div className="h-1.5 rounded-sm bg-neutral-100">
-                          <div
-                            className={`h-1.5 rounded-sm ${isExpected ? 'bg-pink-400' : 'bg-amber-300'}`}
-                            style={{ width: `${width}%` }}
-                          />
-                        </div>
-                      </div>
-                      <div className="w-16 shrink-0 font-mono text-xs tabular-nums text-neutral-600">
-                        {pred.logit >= 0 ? "+" : ""}{pred.logit.toFixed(2)}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+            {attentionWeights && (
+              <p className="text-xs text-gray-500 mt-2 text-center">
+                Green highlights show attention weights. Amber shows the most attended token.
+              </p>
             )}
-
-            <div className="mt-4 pt-4 border-t border-gray-200 text-xs text-gray-600">
-              {expectedNextToken && (
-                <>
-                  <span className="text-pink-600">★</span> The token that came after the first "is" in the pattern.
-                  The induction head successfully predicts it should appear again!
-                </>
-              )}
-            </div>
           </div>
+        </>
+      )}
+
+      {/* Prediction panel */}
+      {activePredictions && activeTokenIdx !== null && (
+        <div className="mt-8">
+          <PredictionPanel
+            title={`Predictions after "${tokens[activeTokenIdx]?.text || ""}"`}
+            showTitle={true}
+            predictions={activePredictions}
+            emptyMessage="No predictions available"
+            barColor="bg-blue-300"
+            useProb={true}
+          />
         </div>
       )}
 
       {/* Explanation */}
-      <div className="mt-4 p-3 bg-indigo-50 border border-indigo-200 rounded-lg">
+      <div className="mt-6 p-4 bg-indigo-50 border border-indigo-200 rounded-lg">
         <div className="text-sm text-indigo-900">
-          <strong>In-context learning:</strong> The induction head looks for tokens tagged with the current token's identity
+          <strong>How the Induction Head Works:</strong> The induction head looks for tokens tagged with the current token's identity
           (thanks to the previous token head). When it finds one, it attends to that token and copies its prediction.
           This lets the model complete repeated patterns—it's learning from the current context, not just training data!
         </div>
+        {maxAttendedIdx !== null && activeTokenIdx !== null && attentionWeights && Array.isArray(attentionWeights) && (
+          <div className="mt-3 text-xs text-indigo-800">
+            <strong>Current observation:</strong> When processing "{tokens[activeTokenIdx]?.text || ""}", 
+            the head most strongly attends to "{tokens[maxAttendedIdx]?.text || ""}" 
+            (attention: {(attentionWeights[maxAttendedIdx]! * 100).toFixed(1)}%), 
+            suggesting it found the repeated pattern and will predict what came after that token.
+          </div>
+        )}
       </div>
-    </figure>
+    </div>
   );
 }
