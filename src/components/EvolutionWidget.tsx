@@ -338,7 +338,7 @@ export function EvolutionWidget() {
                     width: "48px",
                     height: "48px",
                   }}
-                  title={`L1H${head} - induction test: ${(data.heads[headKey].induction_test[currentStepIdx] * 100).toFixed(0)}%`}
+                  title={`L1H${head} - induction test: ${data.heads[headKey].induction_test ? (data.heads[headKey].induction_test[currentStepIdx] * 100).toFixed(0) : 'N/A'}%`}
                 >
                   <div
                     className={`w-full h-full rounded-full flex items-center justify-center text-xs font-semibold transition-all ${
