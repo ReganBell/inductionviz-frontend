@@ -85,4 +85,35 @@ export type AttentionPatternsResponse = {
   n_heads: number;
 };
 
+export type CompletionInfo = {
+  prefix_length: number;
+  completion_text: string;
+  completion_tokens: string[];
+  stopped_reason: string;  // "eos" | "stop_token" | "max_length"
+};
+
+export type BatchCompletionsRequest = {
+  text: string;
+  max_new_tokens?: number;
+  stop_tokens?: string[];
+  temperature?: number;
+  model_name?: string;  // "bigram", "t1", or "t2"
+  layer?: number;
+  head?: number;
+};
+
+export type BatchCompletionsResponse = {
+  tokens: TokenInfo[];
+  completions: CompletionInfo[];
+};
+
+export type BigramBatchResponse = {
+  tokens: TokenInfo[];
+  predictions: Array<Array<{
+    token: string;
+    prob: number;
+    logit?: number;
+  }>>;
+};
+
 

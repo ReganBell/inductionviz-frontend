@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { CombinedAttentionWidget } from "../components/CombinedAttentionWidget";
+import { CompletionPreviewWidget } from "../components/CompletionPreviewWidget";
 import { TokenStrip } from "../components/TokenStrip";
 import { AttentionCircuitWidget } from "../components/AttentionCircuitWidget";
 import { CompetingPatternsDemo } from "../components/CompetingPatternsDemo";
@@ -12,7 +13,7 @@ import { TokenEmbeddingDiagram } from "../components/TokenEmbeddingDiagram";
 import { GradientForceWidget } from "../components/GradientForceWidget";
 import { API_URL } from "../config";
 import type { AttentionPatternsResponse, TokenInfo } from "../types";
-import NoLayerFigure from "../components/NoLayerFigure";
+import NoLayerFigure2 from "./NoLayerFigure2";
 
 const sections = [
   { id: "introduction", title: "Introduction", level: 0 },
@@ -35,9 +36,55 @@ const sections = [
   { id: "gradient-force", title: "Gradient Force", level: 1 },
 ];
 
+const PREVIOUS_TOKEN_TAGS = [
+  { token: "My", tag: "<BOS>" },
+  { token: "name", tag: "My" },
+  { token: "is", tag: "name" },
+  { token: "Regan.", tag: "is" },
+  { token: "My", tag: "Regan." },
+  { token: "name", tag: "My" },
+  { token: "is", tag: "name" },
+];
+
+function TableOfContents({ tocVisible, activeSection }: { tocVisible: boolean, activeSection: string }) {
+  return (      <aside
+    className={`hidden xl:block fixed left-8 top-24 w-56 transition-opacity duration-300 ${
+      tocVisible ? "opacity-100" : "opacity-0 pointer-events-none"
+    }`}
+  >
+    <nav className="space-y-0.5">
+      {sections.map((section) => (
+        <a
+          key={section.id}
+          href={`#${section.id}`}
+          onClick={(e) => {
+            e.preventDefault();
+            document.getElementById(section.id)?.scrollIntoView({
+              behavior: "smooth",
+              block: "start",
+            });
+          }}
+          className={`block py-1 text-xs transition-colors ${
+            section.level === 1 ? "pl-4" : "pl-2"
+          } ${
+            activeSection === section.id
+              ? "text-blue-600 font-medium border-l-2 border-blue-500 -ml-px"
+              : "text-neutral-500 hover:text-neutral-700 border-l-2 border-transparent -ml-px"
+          } ${
+            section.level === 0 ? "font-semibold mt-2" : ""
+          }`}
+        >
+          {section.title}
+        </a>
+      ))}
+    </nav>
+  </aside>);
+}
+
 export function Explainer() {
   const [activeSection, setActiveSection] = useState("introduction");
   const [tocVisible, setTocVisible] = useState(false);
+  const [footnoteVisible, setFootnoteVisible] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -68,38 +115,7 @@ export function Explainer() {
       </header>
 
       {/* Table of Contents - Fixed sidebar outside main flow */}
-      <aside
-        className={`hidden xl:block fixed left-8 top-24 w-56 transition-opacity duration-300 ${
-          tocVisible ? "opacity-100" : "opacity-0 pointer-events-none"
-        }`}
-      >
-        <nav className="space-y-0.5">
-          {sections.map((section) => (
-            <a
-              key={section.id}
-              href={`#${section.id}`}
-              onClick={(e) => {
-                e.preventDefault();
-                document.getElementById(section.id)?.scrollIntoView({
-                  behavior: "smooth",
-                  block: "start",
-                });
-              }}
-              className={`block py-1 text-xs transition-colors ${
-                section.level === 1 ? "pl-4" : "pl-2"
-              } ${
-                activeSection === section.id
-                  ? "text-blue-600 font-medium border-l-2 border-blue-500 -ml-px"
-                  : "text-neutral-500 hover:text-neutral-700 border-l-2 border-transparent -ml-px"
-              } ${
-                section.level === 0 ? "font-semibold mt-2" : ""
-              }`}
-            >
-              {section.title}
-            </a>
-          ))}
-        </nav>
-      </aside>
+      <TableOfContents tocVisible={tocVisible} activeSection={activeSection} />
 
       {/* Main content */}
       <div className="mx-auto max-w-3xl px-6 pb-24">
@@ -111,22 +127,42 @@ export function Explainer() {
 
         {/* Introduction */}
         <section id="introduction" className="prose prose-neutral max-w-none">
-          <p className="text-lg leading-relaxed">
-            {/* why this paper? it's the first real mechinterp paper *on transformers* -- there were others on CNNs etc before */}
-            Let's walk through <a href="https://transformer-circuits.pub/2021/framework/index.html" className="underline">A Mathematical Framework for Transformer Circuits</a>. I think this paper is where the term "mechanistic interpretability" actually comes from. <br></br> <small className="text-neutral-600">(edit: found it on a podcast with Chris a <a href="https://80000hours.org/podcast/episodes/chris-olah-interpretability-research" className="underline">few months before</a>, and it was hinted at back in the <a href="https://distill.pub/2020/circuits/zoom-in/" className="underline">Distill days</a>)</small>
+          <p className="text-lg leading-relaxed mt-6">
+            Let's build the tiniest imaginable transformer that can still do transformer-y stuff, and figure out how it works.
           </p>
 
           <p className="text-lg leading-relaxed mt-6">
-            The idea is to build the tiniest imaginable transformer that can still do transformer-y stuff, and figure out how it works.
+            {/* why this paper? it's the first real mechinterp paper *on transformers* -- there were others on CNNs etc before */}
+           That's the idea behind <a href="https://transformer-circuits.pub/2021/framework/index.html" className="underline">A Mathematical Framework for Transformer Circuits</a>,  the first paper to use the term "mechanistic interpretability,"
+            as this field is now called.<sup 
+              onClick={() => setFootnoteVisible(!footnoteVisible)}
+              className="cursor-pointer text-blue-600 hover:text-blue-800 underline ml-0.5"
+              title="Click to reveal footnote"
+            >[1]</sup>
           </p>
+
+          {footnoteVisible && (
+            <div className="mt-4 p-4 bg-neutral-50  rounded text-sm text-neutral-700">
+              <strong>[1]</strong> For a while people were calling this Bertology, as in BERT, and it's kind of too bad that didn't stick.
+            </div>
+          )}
 
           <p className="text-lg leading-relaxed mt-6">
             {/* Maybe experiment #1 */}
-           Attempt #1: what if you took out <em>all</em> the layers? Well, for one, it's not a transformer anymore: it's the on-ramp and off-ramp with nothing in between, it's just the bun of the sandwich.
+           Transformers consist of some number of identical <em>blocks</em> in a stack: GPT-2 had 12, by GPT-4 there are ~120. What if you remove them?
+          </p>
+
+          <p className="text-lg leading-relaxed mt-6">
+            It's kind of like removing a person's brain
+            -- you leave behind the eyes, which can convert input into
+             a "format" the brain understands, and the mouth,
+             which can convert from  that neural "format" to output that's legible externally.
           </p>
 
       <div id="no-layer-model">
-        <NoLayerFigure />
+        {/* <NoLayerFigure /> */}
+        <NoLayerFigure2 />
+        {/* <img className="mt-6" src='/nolayers.png' /> */}
       </div>
 
           {/* TODO: don't explain this, no additions until we've fixed everything else */}
@@ -135,8 +171,21 @@ export function Explainer() {
              {/* diagram of mapping English characters into a 2-D space */}
              {/* Caption: here, were projecting from twenty-six dimensions, where letters are labelled with their exact identity, to two where they are arrayed out on a surface with X and Y coordinates. Notice how vowels cluster together, because the model understands them to be similar.  */}
           {/* </p> */}
+
           <p className="text-lg leading-relaxed mt-6">
-            When you train this, you end up learning a bigram model, the simplest possible "next token predictor." You simply don't know enough about the situation you're in to do better than a "dumb" prediction based on occurrence statistics.
+            Connecting the two is the residual stream, something like a filesystem, where early layers can write data to be read and used by later layers.  It also constitutes sort of work-in-progress guess for the output that the brain of the model can refine as it works.
+          </p>
+
+          <p className="text-lg leading-relaxed mt-6">
+            When you train this, you end up learning a bigram model, the simplest possible "next token predictor."
+          </p>
+
+          <img className="my-6 p-6" src='/quicktype.png' />
+          {/* <figcaption className="text-center text-neutral-500 text-sm mt-2">The original iOS Quicktype keyboard.</figcaption> */}
+
+          <p className="text-lg leading-relaxed mt-6">
+            Remember the original iOS Quicktype keyboard? It was a similar model with a <em>local</em> understanding of text: words follow each other in a sensible way but long sentences will unravel 
+            into nonsense. In a bigram model, each token is predicted solely based on the token before it. You simply don't know enough about the situation you're in to do better than a dumb prediction based on occurrence statistics.
           </p>
 
                   {/* Bigram Widget */}
@@ -172,45 +221,60 @@ export function Explainer() {
             <CombinedAttentionWidget panels={["l1", "bigram"]} />
           </div>
 
+
+        {/* Completion Preview Widget - NEW */}
+        <div id="completion-preview" className="my-12">
+          <CompletionPreviewWidget />
+        </div>
+
+
+
           <p className="text-lg leading-relaxed mt-6">
-            The heart of the model is still the bigram transition table. But now, we're able to bias those predictions given other tokens that came before. In certain situations, we can do much better. 
-            The second we use a word like "quarterback", we've provided a huge blinking signpost to the model that we're talking about football.
-            In this regime, it makes sense to dramatically boost of all manner of football and generally sports-related tokens.
+            In certain situations, we can do much better than before. The second we use a word like "quarterback", we've provided a <em>huge</em> clue to the model that we're talking about football, a clue that a bigram model would immediately "forget."
+            Now, we can attend to signpost words way back in the sequence that inform us as to what sort of context we're operating in.
           </p>
 
 
           <p className="text-lg leading-relaxed mt-6">
-            The original paper characterizes our model now in terms of skip-trigrams;
-            a skip-trigram gets to incorporate an additional previous token as evidence,
-            and that token can have occurred anywhere in the past.
+            The Anthropic paper characterizes our model now in terms of skip-trigrams;
+            a skip-trigram is a bigram with an additional third token as evidence.
+            That third token can have occurred anywhere in the past.
             Moreover, the attention mechanism lets us take a weighted average over many different skip-trigrams to predict the next token.
           </p>
 
           <p className="text-lg leading-relaxed mt-6">
-           How does this work? Attention is usually explained in terms of keys, queries, and values.
-           This paper uses instead the QK and OV circuits, which I find a little more intuitive.
-           The QK circuit (I often like to think of it as an <i>affinity matrix</i>) tells us how much a token X should care about any other token Y, based on their values. We learn this pattern over time as the network trains.
-          </p>
+           How is this actually implemented? Attention is usually explained in terms of per-token keys, queries, and values, 
+           but this paper instead uses the QK and OV <em>circuits</em>, which I find a little more useful.
+           The QK circuit is a big matrix that tells us how much a token X should care about any other token Y. We learn this pattern over time as the network trains.
+        </p>
 
           <div id="qk-circuit">
             <AttentionCircuitWidget
               panels={["qk"]}
               initialText="Mr and Mrs Dursley, of number four, Privet Drive, were proud to say that they were perfectly normal, thank you very much. They were the last people you'd expect to be involved in anything strange or mysterious, because they just didn't hold with such nonsense. Mr Dursley was the director of a firm called Grunnings, which made drills. He was a big, beefy man with hardly any neck, although he did have a very large moustache."
+              // initialLockedToken={68}
             />
           </div>
 
           <p className="text-lg leading-relaxed mt-6">
-            Certain attention patterns are easier to interpret than others, and different attention heads will learn to attend in their own ways.
-            A common pattern in a single-layer network is to attend to signposts that indicate something about the regime we're in.
-            For example, certain words may signpost a legal context, a sports context, or a medical one.
-            Other tokens may change the context of what follows them -- for example, the words following a `(` are inside a parenthetical, and can be expected to vary systematically from those that aren't.
-            Accordingly, the model will learn to pay attention to these tokens.
+            This matrix has some interesting structure to it, even if it isn't obvious what it's doing.
+            You'll notice that it is lower-triangular: that's because tokens are only allowed to attend to tokens that came before them in the sequence.
+            Entries in the upper right would involve tokens "cheating" by querying the future as to what tokens are likely to come next.
           </p> 
+
+          <p className="text-lg leading-relaxed mt-6">
+            The darker vertical strips represent tokens that the model finds interesting; these are often context clues attended to by many different tokens.
+            Again, <pre className="inline-block bg-neutral-100 px-1.5 py-0.5 rounded text-sm font-mono">quarterback</pre> is an example of such a word; others might indicate a legal context or a medical one.
+          </p>
+
+          <p className="text-lg leading-relaxed mt-6">
+            Tokens can also inform the context with respect to syntax, not meaning. For example, the tokens following a <pre className="inline-block bg-neutral-100 px-1.5 py-0.5 rounded text-sm font-mono">(</pre> are dramatically more likely to be <pre className="inline-block bg-neutral-100 px-1.5 py-0.5 rounded text-sm font-mono">)</pre> because the model knows we need to close the parenthetical.
+            Accordingly, the model will learn to pay attention to these tokens.
+          </p>
 
           <p className="text-lg leading-relaxed mt-6">
             What does attending to a token actually do?
             This is decided by the <strong>OV circuit</strong>, which tells us: when we <em>do</em> attend to a token, how should that modulate our prediction for what comes next?
-            Crucially, the OV circuit is totally independent of the QK. If I'm token X and you attend to me, I'll give you the same output regardless of your (token) identity.
           </p>
 
           <div id="ov-circuit">
@@ -218,13 +282,22 @@ export function Explainer() {
               panels={["ov"]}
               initialText="The email was from Michael our new director"
               initialTab={2}
+              initialHead={2}
             />
           </div>
 
           <p className="text-lg leading-relaxed mt-6">
-            This is an unusually spicy skip-trigram. When this head attends to the name "Michael" (or "Chris", "Andrew", "Dave", "Simon", etc) it becomes much more likely to predict a basket of words associated with leadership and seniority: CEO, manager, director, etc.
+            This is an unusually spicy example. When this head attends to the name "Michael" (or "Chris", "Andrew", "Dave", "Simon", etc) it becomes much more likely to predict a basket of words associated with leadership and seniority: CEO, manager, director, etc.
             This attention head has picked up on the stereotype of (slightly older) white male names in positions of authority.
-          </p> 
+          </p>
+
+          <p className="text-lg leading-relaxed mt-6">
+            The 'Michael' head is a complex, learned stereotype, but the most common pattern is much simpler: the OV circuit just ups our odds of seeing that same token again. 
+          </p>
+
+          <div id="copying-demo">
+            <CopyingBehaviorDemo />
+          </div> 
 
           {/* <p className="text-lg leading-relaxed mt-6">
             In Ruby, you often see control patterns like:
@@ -243,7 +316,7 @@ end`}
           </p> */}
 
           <p className="text-lg leading-relaxed mt-6">
-            Recall that the QK circuit and OV circuit act separately. When tokens are attended to (and thereby influence the model's next-token guess) they do not who is doing the attending. That can be tricky, because competing patterns are inevitable.
+            An important note: the QK circuit and OV circuit act separately. When tokens are attended to, they do not know <em>who</em> is doing the attending. That can be tricky, because competing patterns are inevitable.
           </p>
 
           <div id="competing-patterns">
@@ -251,8 +324,9 @@ end`}
           </div>
 
           <p className="text-lg leading-relaxed mt-6">
-            Luckily, lots of patterns are also synonyms and they <em>can</em> happily share an attention head.
-            In fact, they have to. Our model has only seven attention heads, but encodes many learned features and patterns.
+            Competing patterns necessitate multiple heads, or instances of the attention mechanism, in the model. One head might learn the sports version of the "beat" pattern and another might learn the musical meaning.
+            Luckily, lots of patterns are synonyms and <em>can</em> happily share an attention head.
+            Our toy model has eight attention heads, but encodes many more features than that.
           </p>
 
           <div id="attention-explorer">
@@ -262,15 +336,8 @@ end`}
 
         {/* TODO: You should be able to insert any text here and we will highlight in green if the OV circuit for that token is copying */}
         <section id="copying" className="prose prose-neutral max-w-none mt-12">
-          <h2 className="font-serif text-3xl mt-12 mb-6">Copying</h2>
 
-          <p className="text-lg leading-relaxed mt-6">
-            Before we go though, we should look at one other behavior we see in the single-layer case: copying. The OV circuit has an entry for every token, answering the question, how should we change our logits when this token is attended to? If we attend to this token, how should that inform our guess about what's coming next? In almost all cases, the answer is, we simply boost the chances that we will see that same token again. The more interesting skip-trigrams like we investigated above are rare, relatively. We don't have to attend to any particular token, so we can use the QK circuit to learn if it actually makes sense for a previous token to come up again; if it does, we can attend to it. Having somewhat constant behavior in the OV circuit makes this coordination a little easier.
-          </p>
 
-          <div id="copying-demo">
-            <CopyingBehaviorDemo />
-          </div>
         </section>
 
         {/* Phase 6: Two-Layer Induction */}
@@ -278,11 +345,13 @@ end`}
           <h2 className="font-serif text-3xl mt-12 mb-6">Two Layers: Induction Heads</h2>
 
           <p className="text-lg leading-relaxed">
-            OK, let's finally add another layer of attention, still no MLP.
+            A single layer of attention gave us the power to improve our predictions based on surrounding context. That said, we can only do that based on skip-trigram patterns that were learned from the training set.
+            It's impossible for us to teach the model anything new.
           </p>
 
           <p className="text-lg leading-relaxed mt-6">
-            Now, attention heads are allowed to compose — we can run attention on the output of another attention head, and that makes things surprisingly interesting.
+          Add just one more layer of attention, and that constraint starts to go away.  
+            Now, attention heads can <em>compose</em>. Second-layer heads can work directly on token inputs, as before, but they can also use the outputs of the first layer's heads, written into the residual stream. Composition will allow us to build more complex patterns from simpler ones.
           </p>
           {/* TODO: add a bigram panel to this as well */}
           <div id="induction-comparison">
@@ -290,24 +359,43 @@ end`}
           </div>
 
           <p className="text-lg leading-relaxed mt-6">
-            It's where we see the first glimmers of learning from context. Because what makes transformers so special, and what enables their human-like ability to chat with us and generally be useful, is their ability to reason over context. Precursors in NLP were true models of the English language (sometimes others), and <em>translation</em> was the main goal of research. They reflected how english is usually written, based on what they'd seen; that model was then frozen in time. You could say "my name is Regan" and then ask, "what's my name?" and they would not know, unless hand-coded heuristics caused the system to store that kind of information explicitly (as in Facebook's M, from the first wave of too-early chatbots that preceded the real deal). Transformers enabled crossing the chasm into what feels like a real entity, who you can tell things to, that will remember them. Let's try an easier task. We write <code className="bg-neutral-100 px-1.5 py-0.5 rounded text-sm font-mono">My name is Regan</code> 100 times, then ask the model to complete, <code className="bg-neutral-100 px-1.5 py-0.5 rounded text-sm font-mono">My name is ___</code>. Could we do this with a skip-trigram? A <em>little</em> — the token <code className="bg-neutral-100 px-1.5 py-0.5 rounded text-sm font-mono">is</code> might attend back to <code className="bg-neutral-100 px-1.5 py-0.5 rounded text-sm font-mono">name</code> and encode some vague sense that a name should follow, you could imagine seeing these logits boosted. But that information would still be sourced from a model of the English language as a whole, not the present conversation. So how do we boost the logits for "Regan" just because that's who we're talking about right now?
+            The single-layer model can't track this repetition because it didn't happen in the training set. The probability of the tokens <code className="bg-neutral-100 px-1.5 py-0.5 rounded text-sm font-mono">Reg</code> and <code className="bg-neutral-100 px-1.5 py-0.5 rounded text-sm font-mono">an</code> recurring are probably slightly higher due to copying, 
+            but the model can't begin to understand generic repetition of an entire name, phrase, or idea.
+            {/* Because what makes transformers so special, and what enables their human-like ability to chat with us and generally be useful, is their ability to reason over context. Precursors in NLP were true models of the English language (sometimes others), and <em>translation</em> was the main goal of research. They reflected how english is usually written, based on what they'd seen; that model was then frozen in time. You could say "my name is Regan" and then ask, "what's my name?" and they would not know, unless hand-coded heuristics caused the system to store that kind of information explicitly (as in Facebook's M, from the first wave of too-early chatbots that preceded the real deal). Transformers enabled crossing the chasm into what feels like a real entity, who you can tell things to, that will remember them. Let's try an easier task. We write <code className="bg-neutral-100 px-1.5 py-0.5 rounded text-sm font-mono">My name is Regan</code> 100 times, then ask the model to complete, <code className="bg-neutral-100 px-1.5 py-0.5 rounded text-sm font-mono">My name is ___</code>. Could we do this with a skip-trigram? A <em>little</em> — the token <code className="bg-neutral-100 px-1.5 py-0.5 rounded text-sm font-mono">is</code> might attend back to <code className="bg-neutral-100 px-1.5 py-0.5 rounded text-sm font-mono">name</code> and encode some vague sense that a name should follow, you could imagine seeing these logits boosted. But that information would still be sourced from a model of the English language as a whole, not the present conversation. So how do we boost the logits for "Regan" just because that's who we're talking about right now? */}
           </p>
 
 
           <p className="text-lg leading-relaxed mt-6">
-            An <em>induction head.</em> It's a specific kind of attention head. They are called that because they infer a rule based on repeated observations of a pattern. I don't love the name because a skip-trigram is <em>also</em> an example of doing induction — but you can remember that induction heads are working <em>in context,</em> which is a little cooler and more interesting than skip-trigrams, which model the distribution of training data.
+            We can only accomplish this by composing heads on separate layers. A head performing this new kind of action is called an <em>induction head.</em>
+            {/* How is this done with a two layer model? An <em>induction head.</em> It's a specific kind of attention head that results from <em>composing</em> heads on separate layers. */}
           </p>
 
           <p className="text-lg leading-relaxed mt-6">
-            If you observe the QK and OV action of an attention head that's doing induction, you will see that it attends to <em>past</em> occurrences of the token that comes <em>next</em>. It "sees the future" and attends to that token. So imagine the token <code className="bg-neutral-100 px-1.5 py-0.5 rounded text-sm font-mono">is</code> attending to <code className="bg-neutral-100 px-1.5 py-0.5 rounded text-sm font-mono">Regan</code>. How does it know to do this?
+            If you observe the QK and OV action of an attention head that's doing induction, you will see that it does something strange, like it can see the future. It attends to <em>past</em> occurrences of the token coming <em>next</em>. Somehow, it's like it already knows the answer.
+            
+             {/* It "sees the future" and attends to that token. So imagine the token <code className="bg-neutral-100 px-1.5 py-0.5 rounded text-sm font-mono">is</code> attending to <code className="bg-neutral-100 px-1.5 py-0.5 rounded text-sm font-mono">Regan</code>. How does it know to do this? */}
           </p>
 
-          <p className="text-lg leading-relaxed mt-6">
+          <div id="attention-explorer">
+            <AttentionCircuitWidget 
+            initialText="My name is Regan. My name is "
+            initialLayer={1}
+            initialHead={7}
+            />
+          </div>
+
+
+          {/* <div id="induction-demo">
+            <InductionHeadDemo />
+          </div> */}
+
+          {/* <p className="text-lg leading-relaxed mt-6">
             It's a pretty interesting coordination problem with a definite evolutionary tinge.
-          </p>
+          </p> */}
 
           <p className="text-lg leading-relaxed mt-6">
-            Basically, two attention heads have to grow to complete two tasks, and they do so without knowledge of the other one, and the system doesn't work (I think) until both of them are online and functioning:
+            How can that be? Basically, two attention heads have to work together:
+            {/* , and they do so without knowledge of the other one, and the system doesn't work (I think) until both of them are online and functioning: */}
           </p>
 
           <ol className="text-lg leading-relaxed ml-6 mt-4 space-y-2">
@@ -316,17 +404,33 @@ end`}
           </ol>
 
           <p className="text-lg leading-relaxed mt-6">
-            The previous token head does something pretty simple that doesn't seem very useful: apply a "tag" to every token that indicates which token came right before it. The tag is written into the residual stream in a subspace that's orthogonal to the actual logit/output guess such that we can tuck it away without affecting the output.
+            The previous token head does something that may not seem useful at all:  "tag" every token with the token that came right before it, like a nametag that says "I followed X".
           </p>
 
-          {/* TODO: demonstrate in some way the nature of the "tag" ie writing to a subspace that doesn't affect the output */}
-          {/* This demo is currently busted */}
-          <div id="prev-token-demo">
-            <PreviousTokenHeadDemo />
+          <div className="flex justify-center mt-6">
+            <div className="w-full max-w-md rounded-lg border border-gray-200 bg-white shadow-sm">
+              {/* <div className="px-4 py-2 text-xs font-semibold uppercase tracking-wider text-gray-500 bg-gray-50 text-center">
+                Previous Token Tagging (My name is Regan. My name is)
+              </div> */}
+              <div className="grid grid-cols-2 text-sm text-gray-700">
+                <div className="px-4 py-2 border-b border-gray-200 bg-gray-50  font-semibold text-center">Token</div>
+                <div className="px-4 py-2 border-b border-gray-200 bg-gray-50  font-semibold text-center">Tagged with</div>
+                {PREVIOUS_TOKEN_TAGS.map((item, idx) => (
+                  <React.Fragment key={idx}>
+                    <div className="px-4 py-2 border-b border-gray-100 font-medium text-center">{item.token}</div>
+                    <div className="px-4 py-2 border-b border-gray-100 text-center">{item.tag}</div>
+                  </React.Fragment>
+                ))}
+              </div>
+            </div>
           </div>
 
-
           <p className="text-lg leading-relaxed mt-6">
+            With these tags in place, an induction head can simply try to find a tag matching the current token. Operating at <code className="bg-neutral-100 px-1.5 py-0.5 rounded text-sm font-mono">is</code>, it will attend to <code className="bg-neutral-100 px-1.5 py-0.5 rounded text-sm font-mono">Regan</code>, because <code className="bg-neutral-100 px-1.5 py-0.5 rounded text-sm font-mono">Regan</code> has a matching tag,
+            because it previously followed <code className="bg-neutral-100 px-1.5 py-0.5 rounded text-sm font-mono">is</code>. Attending to <code className="bg-neutral-100 px-1.5 py-0.5 rounded text-sm font-mono">Regan</code> will boost the output logits for that token, under the assumption that it's more likely to show up again.
+          </p>
+
+          {/* <p className="text-lg leading-relaxed mt-6">
             So our tokens would be tagged like:
           </p>
 
@@ -338,20 +442,19 @@ end`}
 
           <p className="text-lg leading-relaxed mt-6">
             The previous token head is a copying head like we saw before, where the OV for tokens simply boosts their own likelihood. But the QK attends to just one token: the token that came immediately before. It attends and copies that output into its own residual stream.
+          </p> */}
+
+          <p className="text-lg leading-relaxed mt-6">
+            {/* So, for example, <code className="bg-neutral-100 px-1.5 py-0.5 rounded text-sm font-mono">Regan</code> would attend to <code className="bg-neutral-100 px-1.5 py-0.5 rounded text-sm font-mono">is</code>, and copy its "logits" — so the output is now effectively a guess heavily slanted toward generating the token <code className="bg-neutral-100 px-1.5 py-0.5 rounded text-sm font-mono">Regan</code> again. */}
+             You might stop here and think — hold on, isn't the previous token head going to screw up the output?
+            Won't this cause us to favor generating <code className="bg-neutral-100 px-1.5 py-0.5 rounded text-sm font-mono">My name is Regan Regan</code>?
+            
           </p>
 
           <p className="text-lg leading-relaxed mt-6">
-            So, for example, <code className="bg-neutral-100 px-1.5 py-0.5 rounded text-sm font-mono">Regan</code> would attend to <code className="bg-neutral-100 px-1.5 py-0.5 rounded text-sm font-mono">is</code>, and copy its "logits" — so the output is now effectively a guess heavily slanted toward generating the token <code className="bg-neutral-100 px-1.5 py-0.5 rounded text-sm font-mono">Regan</code> again. You might stop here and think — hold on, don't we need to generate a newline next, or <code className="bg-neutral-100 px-1.5 py-0.5 rounded text-sm font-mono">Bell</code> or something? Won't this cause us to generate <code className="bg-neutral-100 px-1.5 py-0.5 rounded text-sm font-mono">My name is Regan Regan</code>? No, the reason is that the tag is written into an orthogonal subspace. Now that we have two layers, our output from the head doesn't map exactly to our guess about the next token anymore, it's more like an "under-construction" guess: we're allowed to just do partial computation that's served up for later layers in the network to finish up and create a next-token guess with.
+            No, the reason is that the tag is written into an orthogonal subspace. Now that we have two layers, our output from the head doesn't map exactly to our guess about the next token anymore, it's more like an "under-construction" guess: we're allowed to just do partial computation that's served up for later layers in the network to finish up and create a next-token guess with.
           </p>
 
-
-          <p className="text-lg leading-relaxed mt-6">
-            The induction head itself can be found at layer 2. We want the output to be the token <code className="bg-neutral-100 px-1.5 py-0.5 rounded text-sm font-mono">Regan</code>. But we have no way of knowing yet which token comes next. We do know our own identity, <code className="bg-neutral-100 px-1.5 py-0.5 rounded text-sm font-mono">is</code>, so we can just ask the past! What we do is look for a "tag" that's equal to our own identity. It just so happens that <code className="bg-neutral-100 px-1.5 py-0.5 rounded text-sm font-mono">Regan</code> has such a tag. We find it, and attend to that token, so now we know that we should tilt our output guess toward <code className="bg-neutral-100 px-1.5 py-0.5 rounded text-sm font-mono">Regan</code>.
-          </p>
-
-          <div id="induction-demo">
-            <InductionHeadDemo />
-          </div>
         </section>
 
         {/* Phase 7: Evolution (Placeholder) */}
