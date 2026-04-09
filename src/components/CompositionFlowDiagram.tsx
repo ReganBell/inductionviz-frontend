@@ -1,27 +1,17 @@
 import React, { useEffect, useState } from "react";
-import { API_URL } from "../config";
 import type { CompositionScores } from "../types";
+import { staticData } from "../staticData";
 
 export function CompositionFlowDiagram() {
   const [compositionScores, setCompositionScores] = useState<CompositionScores | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const fetchCompositionScores = async () => {
-      setLoading(true);
-      try {
-        const response = await fetch(`${API_URL}/api/composition-scores?model_name=t2`);
-        if (!response.ok) throw new Error("Failed to fetch composition scores");
-        const data: CompositionScores = await response.json();
-        setCompositionScores(data);
-      } catch (err) {
-        console.error("Error fetching composition scores:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchCompositionScores();
+    setLoading(true);
+    staticData.compositionScoresT2()
+      .then(setCompositionScores)
+      .catch(err => console.error("Error loading composition scores:", err))
+      .finally(() => setLoading(false));
   }, []);
 
   // Find the strongest K-composition between L0H1 and L1H0

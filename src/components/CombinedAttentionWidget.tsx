@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { API_URL } from "../config";
+import type { StaticAttentionData, StaticBigramData } from "../staticData";
 
 interface BigramBatchResponse {
   tokens: Array<{ id: number; text: string }>;
@@ -89,92 +89,48 @@ function PredictionPanel({
 export function CombinedAttentionWidget({
   initialText = "The quarterback threw the football 87 yards for a touchdown",
   panels = ["l1", "bigram"],
+  staticBigramData,
+  staticAttentionData,
 }: {
   initialText?: string;
   panels?: Panel[];
+  staticBigramData?: StaticBigramData | null;
+  staticAttentionData?: StaticAttentionData | null;
 }) {
-  const [text, setText] = useState(initialText);
+  const [text] = useState(initialText);
   const [tokens, setTokens] = useState<string[]>([]);
   const [hoveredTokenIdx, setHoveredTokenIdx] = useState<number | null>(null);
-  const [showTextInput, setShowTextInput] = useState(false);
   const [disablePositionalEmbeddings, setDisablePositionalEmbeddings] = useState(false);
 
-  // Batch results - we always fetch these
+  // Batch results
   const [batchBigramResults, setBatchBigramResults] = useState<BigramBatchResponse | null>(null);
   const [batchAttentionResults, setBatchAttentionResults] = useState<AttentionBatchResponse | null>(null);
   const [selectedBatchTokenIdx, setSelectedBatchTokenIdx] = useState<number>(0);
 
-  // Determine what data we need based on panels
   const needsL1Data = panels.includes("l1");
-  const needsBatchData = panels.includes("bigram");
 
-  // Fetch all data in bulk when text changes
+  // Load from static data
   useEffect(() => {
-    const fetchData = async () => {
-      if (!text.trim()) {
-        setTokens([]);
-        setBatchBigramResults(null);
-        setBatchAttentionResults(null);
-        return;
-      }
-
-      try {
-        // Fetch attention patterns only if l1 panel is enabled
-        if (needsL1Data) {
-          const attentionResponse = await fetch(`${API_URL}/api/attention-patterns`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              text: text,
-              model_name: "t1",
-              layers: [0],
-              heads: [0],
-              disable_positional_embeddings: disablePositionalEmbeddings,
-            }),
-          });
-
-          if (attentionResponse.ok) {
-            const attentionData = await attentionResponse.json();
-            setTokens(attentionData.tokens.map((t: any) => t.text));
-            if (attentionData.full_predictions && attentionData.full_predictions_normalized) {
-              setBatchAttentionResults({
-                tokens: attentionData.tokens,
-                full_predictions: attentionData.full_predictions,
-                full_predictions_normalized: attentionData.full_predictions_normalized,
-                attention: attentionData.attention || [],
-              });
-            }
-          }
-        }
-
-        // Always fetch batch bigram predictions (we need tokens even if not showing l1)
-        const bigramBatchResponse = await fetch(`${API_URL}/api/bigram-batch`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            text: text,
-            k: 10,
-          }),
+    if (staticAttentionData && needsL1Data) {
+      setTokens(staticAttentionData.tokens.map(t => t.text));
+      if (staticAttentionData.full_predictions && staticAttentionData.full_predictions_normalized) {
+        setBatchAttentionResults({
+          tokens: staticAttentionData.tokens,
+          full_predictions: staticAttentionData.full_predictions,
+          full_predictions_normalized: staticAttentionData.full_predictions_normalized,
+          attention: staticAttentionData.attention || [],
         });
-
-        if (bigramBatchResponse.ok) {
-          const bigramBatchData = await bigramBatchResponse.json();
-          setBatchBigramResults(bigramBatchData);
-          setSelectedBatchTokenIdx(0);
-
-          // If we didn't fetch attention data, use bigram tokens
-          if (!needsL1Data) {
-            setTokens(bigramBatchData.tokens.map((t: any) => t.text));
-          }
-        }
-      } catch (err) {
-        console.error("Error fetching data:", err);
       }
-    };
+    }
 
-    const timer = setTimeout(fetchData, 300);
-    return () => clearTimeout(timer);
-  }, [text, needsL1Data, disablePositionalEmbeddings]);
+    if (staticBigramData) {
+      setBatchBigramResults(staticBigramData);
+      setSelectedBatchTokenIdx(0);
+      if (!needsL1Data) {
+        setTokens(staticBigramData.tokens.map(t => t.text));
+      }
+    }
+  }, [staticAttentionData, staticBigramData, needsL1Data]);
 
   // Determine active token index: use hovered token if available, otherwise use last token
   const activeTokenIdx = hoveredTokenIdx !== null 
@@ -226,28 +182,7 @@ export function CombinedAttentionWidget({
         )}
       </div>
 
-      {/* Text input - toggle */}
-      {showTextInput && (
-        <div className="mb-8 max-w-2xl mx-auto">
-          <div className="relative flex items-center">
-            <div className="absolute left-3 z-10 group">
-              <span className="text-gray-400 text-sm font-mono select-none cursor-help">
-                &lt;|BOS|&gt;
-              </span>
-              <div className="invisible group-hover:visible absolute left-0 top-full mt-1 w-64 p-2 bg-gray-900 text-white text-xs rounded shadow-lg z-20">
-                Beginning of Sequence token - a special token that marks the start of input to the model
-              </div>
-            </div>
-            <input
-              type="text"
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              className="w-full pl-24 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Type some text..."
-            />
-          </div>
-        </div>
-      )}
+      {/* Text input removed - using static data */}
 
       {/* Token strip - always show */}
       {tokens.length > 0 && (
@@ -309,15 +244,8 @@ export function CombinedAttentionWidget({
             )}
           </div>
 
-          {/* Toggle button */}
-          <div className="mb-8 text-center">
-            <button
-              onClick={() => setShowTextInput(!showTextInput)}
-              className="text-xs text-neutral-500 hover:text-neutral-700 underline focus:outline-none"
-            >
-              {showTextInput ? "hide input" : "use your own text"}
-            </button>
-          </div>
+          {/* spacer */}
+          <div className="mb-8" />
         </>
       )}
 

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { API_URL } from "../config";
+import type { StaticAttentionData } from "../staticData";
 
 interface Prediction {
   token: string;
@@ -68,75 +68,31 @@ function PredictionPanel({
 
 export function InductionComparisonWidget({
   initialText = "My name is Regan. My name is",
+  staticT1Data,
+  staticT2Data,
 }: {
   initialText?: string;
+  staticT1Data?: StaticAttentionData | null;
+  staticT2Data?: StaticAttentionData | null;
 }) {
-  const [text, setText] = useState(initialText);
   const [tokens, setTokens] = useState<string[]>([]);
   const [hoveredTokenIdx, setHoveredTokenIdx] = useState<number | null>(null);
-  const [showTextInput, setShowTextInput] = useState(false);
 
   // Predictions from both models
   const [t1Predictions, setT1Predictions] = useState<Prediction[][] | null>(null);
   const [t2Predictions, setT2Predictions] = useState<Prediction[][] | null>(null);
 
-  // Fetch predictions from both models
   useEffect(() => {
-    const fetchData = async () => {
-      if (!text.trim()) {
-        setTokens([]);
-        setT1Predictions(null);
-        setT2Predictions(null);
-        return;
+    if (staticT1Data) {
+      setTokens(staticT1Data.tokens.map(t => t.text));
+      if (staticT1Data.full_predictions) {
+        setT1Predictions(staticT1Data.full_predictions);
       }
-
-      try {
-        // Fetch t1 (1-layer) predictions
-        const t1Response = await fetch(`${API_URL}/api/attention-patterns`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            text: text,
-            model_name: "t1",
-            layers: [0],
-            heads: [0],
-          }),
-        });
-
-        if (t1Response.ok) {
-          const t1Data = await t1Response.json();
-          setTokens(t1Data.tokens.map((t: any) => t.text));
-          if (t1Data.full_predictions) {
-            setT1Predictions(t1Data.full_predictions);
-          }
-        }
-
-        // Fetch t2 (2-layer) predictions
-        const t2Response = await fetch(`${API_URL}/api/attention-patterns`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            text: text,
-            model_name: "t2",
-            layers: [0, 1],
-            heads: null,
-          }),
-        });
-
-        if (t2Response.ok) {
-          const t2Data = await t2Response.json();
-          if (t2Data.full_predictions) {
-            setT2Predictions(t2Data.full_predictions);
-          }
-        }
-      } catch (err) {
-        console.error("Error fetching data:", err);
-      }
-    };
-
-    const timer = setTimeout(fetchData, 300);
-    return () => clearTimeout(timer);
-  }, [text]);
+    }
+    if (staticT2Data?.full_predictions) {
+      setT2Predictions(staticT2Data.full_predictions);
+    }
+  }, [staticT1Data, staticT2Data]);
 
   // Determine active token index: use hovered token if available, otherwise use last token
   const activeTokenIdx = hoveredTokenIdx !== null
@@ -169,28 +125,6 @@ export function InductionComparisonWidget({
         </p>
       </div>
 
-      {/* Text input - toggle */}
-      {showTextInput && (
-        <div className="mb-8 max-w-2xl mx-auto">
-          <div className="relative flex items-center">
-            <div className="absolute left-3 z-10 group">
-              <span className="text-gray-400 text-sm font-mono select-none cursor-help">
-                &lt;|BOS|&gt;
-              </span>
-              <div className="invisible group-hover:visible absolute left-0 top-full mt-1 w-64 p-2 bg-gray-900 text-white text-xs rounded shadow-lg z-20">
-                Beginning of Sequence token - a special token that marks the start of input to the model
-              </div>
-            </div>
-            <input
-              type="text"
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              className="w-full pl-24 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Type some text..."
-            />
-          </div>
-        </div>
-      )}
 
       {/* Token strip */}
       {tokens.length > 0 && (
@@ -229,15 +163,7 @@ export function InductionComparisonWidget({
             </div>
           </div>
 
-          {/* Toggle button */}
-          <div className="mb-8 text-center">
-            <button
-              onClick={() => setShowTextInput(!showTextInput)}
-              className="text-xs text-neutral-500 hover:text-neutral-700 underline focus:outline-none"
-            >
-              {showTextInput ? "hide input" : "use your own text"}
-            </button>
-          </div>
+          <div className="mb-8" />
         </>
       )}
 
@@ -265,7 +191,7 @@ export function InductionComparisonWidget({
       )}
 
       {/* Explanation */}
-      {targetToken && (
+      {/* {targetToken && (
         <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
           <div className="text-sm text-blue-900">
             <strong>Key difference:</strong> The 2-layer model can predict{" "}
@@ -275,7 +201,7 @@ export function InductionComparisonWidget({
             and bigrams, so it can't do true in-context learning like this.
           </div>
         </div>
-      )}
+      )} */}
     </div>
   );
 }

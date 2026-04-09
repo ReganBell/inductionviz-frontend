@@ -2,19 +2,29 @@ import { useState, useMemo, useEffect } from "react";
 import { TokenStrip } from "./TokenStrip";
 import { QKCircuitWidget } from "./QKCircuitWidget";
 import { OVCircuitWidget } from "./OVCircuitWidget";
-import { API_URL } from "../config";
 import type { AttentionPatternsResponse } from "../types";
+import type { StaticAttentionData } from "../staticData";
+
+interface PredictionDetail {
+  token: string;
+  prob: string; // e.g., "+2.01" or "High"
+  type: "target" | "distractor" | "related";
+}
 
 interface Feature {
   name: string;
-  description: string;
+  description: string; // Short text for the list
+  patternExplanation?: string; // The "The model has learned..." text
   text: string;
-  lockedTokenIdx: number;
-  hoveredSourceTokenIdx: number;
+  lockedTokenIdx: number; // The "Query" position
+  hoveredSourceTokenIdx: number; // The "Key" position
+  layer?: number; // Added for flattened list
   headId?: number; // Added for flattened list
+  predictedTokens?: PredictionDetail[]; // The "Value" output
 }
 
 interface HeadData {
+  layer: number;
   headId: number;
   headName: string;
   features: Feature[];
@@ -32,341 +42,522 @@ const HEAD_COLORS: Record<number, { bg: string; border: string; text: string }> 
   7: { bg: "#FCE7F3", border: "#EC4899", text: "#831843" }, // pink
 };
 
+function SuperpositionGrid({ 
+  features, 
+  selectedIndex, 
+  onSelect 
+}: { 
+  features: (Feature & { layer: number; headId: number; headName: string })[], 
+  selectedIndex: number, 
+  onSelect: (idx: number) => void 
+}) {
+  return (
+    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+      {features.map((feature, idx) => {
+        const isSelected = selectedIndex === idx;
+        const colors = HEAD_COLORS[feature.headId];
+        
+        return (
+          <button
+            key={idx}
+            onClick={() => onSelect(idx)}
+            className={`
+              relative flex flex-col text-left p-3 rounded-lg border transition-all duration-200 h-full
+              ${isSelected 
+                ? "ring-2 ring-offset-1 shadow-md z-10 scale-[1.02]" 
+                : "hover:border-gray-300 hover:shadow-sm opacity-90 hover:opacity-100"
+              }
+            `}
+            style={{
+              backgroundColor: isSelected ? 'white' : colors.bg,
+              borderColor: isSelected ? colors.border : 'transparent',
+              ...(isSelected && { 
+                '--tw-ring-color': colors.border,
+                boxShadow: `0 0 0 2px ${colors.border}`
+              } as React.CSSProperties)
+            }}
+          >
+            {/* Feature Name */}
+            <span className={`text-xs font-bold leading-tight ${isSelected ? 'text-gray-900' : 'text-gray-800'}`}>
+              {feature.name}
+            </span>
+            
+            {/* Short Description on hover or if space permits */}
+            <span className="text-[10px] text-gray-600 mt-1 line-clamp-2 leading-snug">
+              {feature.description}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function HeadSelectorDiagram({
+  selectedLayer,
+  selectedHead,
+  onHeadClick
+}: {
+  selectedLayer: number;
+  selectedHead: number;
+  onHeadClick: (layer: number, headId: number) => void;
+}) {
+  const colors = {
+    text: "#334155",        // Slate 700
+    subText: "#64748b",     // Slate 500
+    stroke: "#94a3b8",     // Slate 400
+    residSpine: "#cbd5e1", // Slate 300
+    tokenFill: "#f1f5f9",  // Slate 100
+  };
+
+  return (
+    <div className="bg-white rounded-lg border border-gray-200 p-6">
+      <div className="flex flex-col items-center">
+        <svg viewBox="0 0 400 180" className="w-full max-w-[500px] overflow-visible">
+          <defs>
+            <marker id="head-arrow" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto" markerUnits="strokeWidth">
+              <path d="M0,0 L6,3 L0,6" fill={colors.stroke} />
+            </marker>
+          </defs>
+
+          {/* Input Token */}
+          <rect x="150" y="10" width="100" height="24" rx="4" fill={colors.tokenFill} stroke={colors.stroke} strokeWidth="1" />
+          <text x="200" y="26" textAnchor="middle" fontSize="10" fontFamily="monospace" fill={colors.text}>token</text>
+          <line x1="200" y1="34" x2="200" y2="50" stroke={colors.stroke} strokeWidth="1.5" markerEnd="url(#head-arrow)" />
+
+          {/* Embedding Matrix */}
+          <rect x="140" y="50" width="120" height="28" rx="4" fill="white" stroke={colors.stroke} strokeWidth="1.5" />
+          <text x="200" y="68" textAnchor="middle" fontSize="11" fontWeight="600" fill={colors.text}>
+            Embedding <tspan fill={colors.subText} fontWeight="400" fontSize="9">(W_E)</tspan>
+          </text>
+
+          {/* Residual Stream */}
+          <line x1="200" y1="78" x2="200" y2="100" stroke={colors.residSpine} strokeWidth="3" />
+
+          {/* Attention Heads in Row */}
+          <g>
+            {HEAD_FEATURES.filter(h => h.layer === selectedLayer).map((head, idx) => {
+              const isSelected = selectedHead === head.headId;
+              const headColor = HEAD_COLORS[head.headId];
+              const x = 20 + idx * 45;
+              const y = 100;
+
+              return (
+                <g key={head.headId}>
+                  <rect
+                    x={x}
+                    y={y}
+                    width="40"
+                    height="30"
+                    rx="4"
+                    fill={isSelected ? headColor.bg : "white"}
+                    stroke={isSelected ? headColor.border : colors.stroke}
+                    strokeWidth={isSelected ? "2" : "1"}
+                    className="cursor-pointer transition-all"
+                    onClick={() => onHeadClick(head.layer, head.headId)}
+                    style={{ cursor: 'pointer' }}
+                  />
+                  <text
+                    x={x + 20}
+                    y={y + 19}
+                    textAnchor="middle"
+                    fontSize="10"
+                    fill={isSelected ? headColor.text : colors.text}
+                    fontFamily="system-ui"
+                    fontWeight={isSelected ? "600" : "400"}
+                    className="pointer-events-none"
+                  >
+                    H{head.headId}
+                  </text>
+                </g>
+              );
+            })}
+          </g>
+
+          {/* Residual Stream Continue */}
+          <line x1="200" y1="130" x2="200" y2="150" stroke={colors.residSpine} strokeWidth="3" markerEnd="url(#head-arrow)" />
+
+          {/* Unembedding Matrix */}
+          <rect x="130" y="150" width="140" height="28" rx="4" fill="white" stroke={colors.stroke} strokeWidth="1.5" />
+          <text x="200" y="168" textAnchor="middle" fontSize="11" fontWeight="600" fill={colors.text}>
+            Unembedding <tspan fill={colors.subText} fontWeight="400" fontSize="9">(W_U)</tspan>
+          </text>
+        </svg>
+      </div>
+    </div>
+  );
+}
+
+function TrigramExplainer({ feature }: { feature: Feature }) {
+  if (!feature.predictedTokens || !feature.patternExplanation) return null;
+  
+  const tokens = feature.text.split(" ");
+  const sourceToken = tokens[feature.hoveredSourceTokenIdx];
+  const queryToken = tokens[feature.lockedTokenIdx];
+  
+  return (
+    <div className="bg-white rounded-xl border border-blue-100 shadow-sm overflow-hidden mb-8">
+      {/* Header / Pattern Description */}
+      <div className="bg-slate-50 px-6 py-4 border-b border-slate-100">
+        <h3 className="font-bold text-slate-800 text-lg mb-1">{feature.name}</h3>
+        <p className="text-slate-600 text-sm leading-relaxed">
+          {feature.patternExplanation}
+        </p>
+      </div>
+
+      {/* The Visual Skip-Trigram Equation */}
+      <div className="p-6 grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+        
+        {/* 1. The Sentence Context (Left Side) */}
+        <div className="md:col-span-7 flex flex-col gap-4">
+          <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">
+            Skip-Trigram
+          </div>
+          
+          <div className="bg-slate-100 rounded-lg p-4 flex flex-wrap gap-2 items-center font-mono text-sm">
+            {tokens.map((t, i) => {
+              let style = "bg-white text-slate-500 border border-slate-200 opacity-50"; // Default
+              let label = null;
+              if (i === feature.hoveredSourceTokenIdx) {
+                style = "bg-blue-100 text-blue-800 border border-blue-300 font-bold shadow-sm ring-2 ring-blue-200";
+                // label = "SOURCE (Key)";
+              } else if (i === feature.lockedTokenIdx) {
+                style = "bg-amber-100 text-amber-800 border border-amber-300 font-bold shadow-sm ring-2 ring-amber-200";
+                // label = "CURRENT (Query)";
+              }
+              return (
+                <div key={i} className="relative group">
+                  <span className={`px-2 py-1.5 rounded transition-all ${style}`}>
+                    {t}
+                  </span>
+                  {label && (
+                    <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 whitespace-nowrap text-[10px] font-bold uppercase tracking-tight text-slate-500">
+                      {label}
+                    </div>
+                  )}
+                  {/* Draw arc visualization only for active tokens */}
+                  {/* {i === feature.lockedTokenIdx && (
+                     <svg className="absolute bottom-full left-1/2 -translate-x-1/2 w-32 h-8 pointer-events-none overflow-visible" style={{ left: '-40px' }}>
+                       <path 
+                         d="M 50,30 Q 20,-10 -40,30" 
+                         fill="none" 
+                         stroke="#3B82F6" 
+                         strokeWidth="2" 
+                         strokeDasharray="4 2"
+                         markerEnd="url(#arrowhead)"
+                       />
+                     </svg>
+                  )} */}
+                </div>
+              );
+            })}
+            
+            {/* The blank to be filled */}
+            <div className="relative ml-2">
+              <span className="px-3 py-1.5 rounded bg-green-50 border-2 border-dashed border-green-300 text-green-700 font-bold animate-pulse">
+                ?
+              </span>
+              {/* <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 whitespace-nowrap text-[10px] font-bold uppercase tracking-tight text-green-600">
+                PREDICTION
+              </div> */}
+            </div>
+          </div>
+          
+          {/* <div className="text-xs text-slate-500 italic mt-2">
+            "When the model reaches <strong>'{queryToken}'</strong>, it looks back at <strong>'{sourceToken}'</strong>..."
+          </div> */}
+        </div>
+
+        {/* Arrow Divider */}
+        <div className="md:col-span-1 flex justify-center">
+          <div className="text-slate-300 text-4xl">→</div>
+        </div>
+
+        {/* 2. The Resulting Boost (Right Side) */}
+        <div className="md:col-span-4">
+           <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+            Boosted Probability
+          </div>
+          <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
+            {feature.predictedTokens.map((pred, idx) => (
+              <div key={idx} className="flex items-center justify-between px-3 py-2 border-b border-slate-50 last:border-0 hover:bg-slate-50 transition-colors">
+                <span className={`font-medium ${pred.type === 'target' ? 'text-green-700' : 'text-slate-600'}`}>
+                  {pred.token}
+                </span>
+                <span className={`text-xs font-mono px-1.5 py-0.5 rounded ${
+                  pred.type === 'target' ? 'bg-green-100 text-green-800' : 'bg-slate-100 text-slate-500'
+                }`}>
+                  {pred.prob}
+                </span>
+              </div>
+            ))}
+          </div>
+          {/* <div className="text-xs text-slate-400 mt-2 px-1">
+            The head writes this information into the residual stream.
+          </div> */}
+        </div>
+      </div>
+      
+      {/* Arrow Head Definition */}
+      {/* <svg className="hidden">
+        <defs>
+          <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="0" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#3B82F6" />
+          </marker>
+        </defs>
+      </svg> */}
+    </div>
+  );
+}
+
 const HEAD_FEATURES: HeadData[] = [
   {
+    layer: 0,
     headId: 0,
     headName: "Head 0:0",
     features: [
       {
-        name: "Punctuation-Driven Copying",
-        description: "When query is punctuation (';', ')', '\"'), attends to salient token and upweights exact copies or variants",
-        text: "The documents which were meant to be open might",
-        lockedTokenIdx: 8,
-        hoveredSourceTokenIdx: 7
+        name: "Sports Context (Beat/Win)",
+        description: "Links sports verbs to competition outcomes",
+        patternExplanation: "When the model sees a gap after sports-related clauses, it looks back at verbs like 'beat' to predict outcomes like 'clinched' or 'rivalry', even across several words.",
+        text: "The underdog managed to beat the heavy favorite and",
+        lockedTokenIdx: 8, 
+        hoveredSourceTokenIdx: 4,
+        predictedTokens: [
+          { token: "clinched", prob: "+2.19", type: "target" },
+          { token: "dominance", prob: "+1.99", type: "related" },
+          { token: "rivalry", prob: "+1.94", type: "related" },
+          { token: "lost", prob: "-0.5", type: "distractor" }
+        ]
       },
       // {
-      //   name: "Legal Concept Association",
-      //   description: "Clusters legal terminology - attending to one legal concept boosts related legal terms",
-      //   text: "The defendant was charged with acting with malice consequently",
-      //   lockedTokenIdx: 8,
-      //   hoveredSourceTokenIdx: 7
-      // },
-      // {
-      //   name: "Sports & Competition",
-      //   description: "Links sports and competition terms - 'victory' boosts 'defeated', 'clinched', etc.",
-      //   text: "It was a hard fought victory including",
+      //   name: "Induction (Repeated Terms)",
+      //   description: "Copies previous unique words",
+      //   patternExplanation: "A classic induction head. It searches for the current token's previous occurrence in the text and predicts the word that followed it *that* time.",
+      //   text: "The error was reported immediately and as reported",
       //   lockedTokenIdx: 6,
-      //   hoveredSourceTokenIdx: 5
-      // },
-      // {
-      //   name: "Abstract & Philosophical",
-      //   description: "Associates philosophical concepts and thinkers - 'argues' → Heidegger, Nietzsche, epistemology",
-      //   text: "The philosopher argues that sense determines truth",
-      //   lockedTokenIdx: 5,
-      //   hoveredSourceTokenIdx: 2
-      // },
-      // {
-      //   name: "Gender & Sex Terminology",
-      //   description: "Groups gender-related terms - 'men' boosts 'women', 'wives', 'husbands', 'sexes'",
-      //   text: "This behavior is common in men but",
-      //   lockedTokenIdx: 6,
-      //   hoveredSourceTokenIdx: 5
+      //   hoveredSourceTokenIdx: 3,
+      //   predictedTokens: [
+      //     { token: "reported", prob: "+2.90", type: "target" },
+      //     { token: "reports", prob: "+2.38", type: "related" },
+      //     { token: "investigators", prob: "+2.16", type: "related" }
+      //   ]
       // }
     ]
   },
   {
+    layer: 0,
     headId: 1,
     headName: "Head 0:1",
     features: [
       {
-        name: "Newline/Formatting Insertion",
-        description: "Detects structural tokens like colons and predicts newlines for formatting",
-        text: "The results are as follows :",
-        lockedTokenIdx: 5,
-        hoveredSourceTokenIdx: 0
+        name: "List Structuring (Pros/Cons)",
+        description: "Completes structured lists across distances",
+        patternExplanation: "The head maintains the state of a list. Seeing 'Pros' allows it to predict 'Cons' significantly later in the sentence structure.",
+        text: "The review section was divided into two parts: Pros and",
+        lockedTokenIdx: 8, 
+        hoveredSourceTokenIdx: 7,
+        predictedTokens: [
+          { token: "Cons", prob: "+5.20", type: "target" },
+          { token: "Disadvantages", prob: "+2.27", type: "related" },
+          { token: "Conclusions", prob: "+1.1", type: "distractor" }
+        ]
       },
-      // {
-      //   name: "Code/Markup Tag Completion",
-      //   description: "Identifies opening brackets and predicts closing tags",
-      //   text: "Please review the document at [ URL",
-      //   lockedTokenIdx: 6,
-      //   hoveredSourceTokenIdx: 5
-      // },
-      // {
-      //   name: "Prefix-based Word Completion",
-      //   description: "Builds words from 'an' prefix - predicts 'orage', 'uge', 'les' after 'an'",
-      //   text: "He was looking for an umbrella",
-      //   lockedTokenIdx: 4,
-      //   hoveredSourceTokenIdx: 3
-      // },
-      // {
-      //   name: "Last Name Association",
-      //   description: "Attends to first names and predicts associated last names (David → Bezos, Horowitz)",
-      //   text: "I just read an article about David Bezos",
-      //   lockedTokenIdx: 6,
-      //   hoveredSourceTokenIdx: 5
-      // },
-      // {
-      //   name: "Question/Query Detection",
-      //   description: "Detects interrogatives (where, how, when) and predicts location-related suffixes",
-      //   text: "where are the best places to visit in the uk",
-      //   lockedTokenIdx: 0,
-      //   hoveredSourceTokenIdx: 8
-      // }
+      {
+        name: "Code/Markup Tag Completion",
+        description: "Closes brackets and formatting tags",
+        patternExplanation: "When inside a URL or bracket structure, the model looks back at the opening bracket to predict the closing one or the URL content.",
+        text: "Please review the document at [ original URL",
+        lockedTokenIdx: 7,
+        hoveredSourceTokenIdx: 5,
+        predictedTokens: [
+          { token: "]", prob: "+2.78", type: "target" },
+          { token: "link", prob: "+1.5", type: "related" },
+          { token: "file", prob: "+1.2", type: "related" }
+        ]
+      }
     ]
   },
   {
+    layer: 0,
     headId: 2,
     headName: "Head 0:2",
     features: [
       {
-        name: "First Name → Job Title",
-        description: "Attends to names like 'Michael' and strongly predicts job titles (Manager, Director, CEO)",
-        text: "The email was from Michael our new director",
-        lockedTokenIdx: 8,
-        hoveredSourceTokenIdx: 4
+        name: "Name → Job Title (Michael)",
+        description: "Links 'Michael' to 'Manager/Director'",
+        patternExplanation: "A socio-statistical bias in the training data. The name 'Michael' attending to 'project' or 'new' strongly activates leadership roles.",
+        text: "The quarterly report was signed by Michael , the project",
+        lockedTokenIdx: 9, 
+        hoveredSourceTokenIdx: 6, 
+        predictedTokens: [
+          { token: "Manager", prob: "+2.72", type: "target" },
+          { token: "Director", prob: "+2.70", type: "target" },
+          { token: "CEO", prob: "+2.52", type: "target" },
+          { token: "intern", prob: "-1.2", type: "distractor" }
+        ]
       },
-      // {
-      //   name: "Comparative 'Than' Feature",
-      //   description: "Completes comparative structures - 'better', 'more', 'greater' → 'than'",
-      //   text: "This model performs better than the previous one",
-      //   lockedTokenIdx: 3,
-      //   hoveredSourceTokenIdx: 2
-      // },
-      // {
-      //   name: "See Disambiguation (Wikipedia)",
-      //   description: "Learned Wikipedia pattern - 'see', 'look', 'seen' → 'disambiguation'",
-      //   text: "For other meanings of this term please see the disambiguation",
-      //   lockedTokenIdx: 8,
-      //   hoveredSourceTokenIdx: 7
-      // },
-      // {
-      //   name: "State of Being Completion",
-      //   description: "Completes 'is [state]' phrases - predicts 'verge', 'forefront', 'utmost'",
-      //   text: "This new development is on the verge of",
-      //   lockedTokenIdx: 4,
-      //   hoveredSourceTokenIdx: 3
-      // },
-      // {
-      //   name: "Prepositional Phrase ('on')",
-      //   description: "Completes 'on [noun]' phrases - 'on' → 'basis', 'fringes', 'footing'",
-      //   text: "Applications will be reviewed on a weekly basis",
-      //   lockedTokenIdx: 5,
-      //   hoveredSourceTokenIdx: 4
-      // }
+      {
+        name: "Name → Job Title (Chris)",
+        description: "Links 'Chris' to 'Officer/VP'",
+        patternExplanation: "Demonstrating generality: similar to Michael, 'Chris' (and other male names) triggers the same 'Executive' circuit.",
+        text: "We are waiting for approval from Chris , our chief",
+        lockedTokenIdx: 9, 
+        hoveredSourceTokenIdx: 6, 
+        predictedTokens: [
+          { token: "Officer", prob: "+2.21", type: "target" },
+          { token: "Executive", prob: "+2.0", type: "target" },
+          { token: "Financial", prob: "+1.8", type: "related" }
+        ]
+      },
+      {
+        name: "Comparison Completion",
+        description: "Completes 'better... than' structures",
+        patternExplanation: "The model holds the context of a comparative adjective ('better') across a phrase to correctly predict the syntactic closer ('than').",
+        text: "This model performs significantly better in reducing uncertainty",
+        lockedTokenIdx: 7, 
+        hoveredSourceTokenIdx: 4, 
+        predictedTokens: [
+          { token: "than", prob: "+2.35", type: "target" },
+          { token: "on", prob: "+1.0", type: "distractor" },
+          { token: "at", prob: "+0.5", type: "distractor" }
+        ]
+      }
     ]
   },
   {
+    layer: 0,
     headId: 3,
     headName: "Head 0:3",
     features: [
       {
-        name: "Proper Noun & Place Prefix",
-        description: "Completes place names and proper nouns from prefixes - 'Dun' → Edinburgh, Duncan, Castle",
-        text: "He was from a small village near Dun fermline",
-        lockedTokenIdx: 7,
-        hoveredSourceTokenIdx: 6
-      },
-      // {
-      //   name: "Figure/Embodiment Technical",
-      //   description: "Patent/paper pattern: numbers after 'FIG' or 'embodiment' predict technical terms",
-      //   text: "A cross section is shown in FIG 4 of",
-      //   lockedTokenIdx: 7,
-      //   hoveredSourceTokenIdx: 5
-      // },
-      // {
-      //   name: "Medical & Anatomical",
-      //   description: "Body parts boost related medical terms - 'eye' → glaucoma, cataract, corneal",
-      //   text: "The scan revealed damage to the patient eye region",
-      //   lockedTokenIdx: 7,
-      //   hoveredSourceTokenIdx: 6
-      // },
-      // {
-      //   name: "Punctuation Academic Insertion",
-      //   description: "Closing brackets/parens predict academic terms like 'Dirichlet', 'bibliography'",
-      //   text: "This was the stated goal ) Furthermore",
-      //   lockedTokenIdx: 5,
-      //   hoveredSourceTokenIdx: 4
-      // },
-      // {
-      //   name: "Topic Introduction",
-      //   description: "Simple words after punctuation introduce new proper nouns/places",
-      //   text: "I am not sure what to look for but",
-      //   lockedTokenIdx: 7,
-      //   hoveredSourceTokenIdx: 4
-      // }
+        name: "Wildlife Context (Western)",
+        description: "Links directions to specific species",
+        patternExplanation: "The token 'Western' usually predicts political entities, but when 'wolf' or 'animal' context is present, it specifies 'gray' or 'hemisphere'.",
+        text: "The population of the gray wolf in the Western",
+        lockedTokenIdx: 8, 
+        hoveredSourceTokenIdx: 5, 
+        predictedTokens: [
+          { token: "Hemisphere", prob: "+2.84", type: "target" },
+          { token: "Isles", prob: "+2.05", type: "target" },
+          { token: "Union", prob: "+1.5", type: "related" }
+        ]
+      }
     ]
   },
   {
+    layer: 0,
     headId: 4,
     headName: "Head 0:4",
     features: [
       {
-        name: "Download/Buy Kindle",
-        description: "Words like 'download' massively boost 'Kindle', academic math terms (algebras, cohomology)",
-        text: "You can download this book on Kindle",
-        lockedTokenIdx: 2,
-        hoveredSourceTokenIdx: 1
+        name: "Download → Kindle",
+        description: "E-reader context activation",
+        patternExplanation: "The word 'download' creates a massive logit boost for 'Kindle', even when separated by several words, reflecting ebook patterns.",
+        text: "If you decide to download the book, you could read it on",
+        lockedTokenIdx: 11, 
+        hoveredSourceTokenIdx: 4, 
+        predictedTokens: [
+          { token: "Kindle", prob: "+5.93", type: "target" },
+          { token: "iPhone", prob: "+1.5", type: "related" },
+          { token: "paper", prob: "-2.0", type: "distractor" }
+        ]
       },
-      // {
-      //   name: "Cyrillic Character Feature",
-      //   description: "Same triggers as Kindle also predict Cyrillic capitals (О, И, Т, К)",
-      //   text: "The file is ready for download in Russian",
-      //   lockedTokenIdx: 5,
-      //   hoveredSourceTokenIdx: 4
-      // },
-      // {
-      //   name: "Modal Verb → Medical",
-      //   description: "Modal verbs like 'ought', 'could' predict medical terms: malignancy, epidermis, coronary",
-      //   text: "This is a procedure that we ought to consider",
-      //   lockedTokenIdx: 6,
-      //   hoveredSourceTokenIdx: 5
-      // },
-      // {
-      //   name: "Technical Acronym Prediction",
-      //   description: "Prepositions after technical context predict acronyms: LS, CFG, AG, NL, PI",
-      //   text: "This packet structure comprises data for transmission",
-      //   lockedTokenIdx: 5,
-      //   hoveredSourceTokenIdx: 4
-      // },
-      // {
-      //   name: "Word Completion (conspiracy)",
-      //   description: "Simple prefix completion - 'cons' → 'piracy', 'piring'",
-      //   text: "He was accused of cons piracy charges",
-      //   lockedTokenIdx: 4,
-      //   hoveredSourceTokenIdx: 3
-      // }
+      {
+        name: "Download → Academic",
+        description: "Triggers math paper terminology",
+        patternExplanation: "In a different context, 'download' predicts 'cohomology' or 'algebra', showing the head's sensitivity to the *type* of document.",
+        text: "The paper is available for download and discusses the algebra",
+        lockedTokenIdx: 9, 
+        hoveredSourceTokenIdx: 5, 
+        predictedTokens: [
+          { token: "cohomology", prob: "+5.08", type: "target" },
+          { token: "topology", prob: "+4.5", type: "target" },
+          { token: "groups", prob: "+3.0", type: "target" }
+        ]
+      },
+      {
+        name: "Download → Cyrillic",
+        description: "Piracy site artifact",
+        patternExplanation: "A dataset artifact: 'download' strongly predicts single Cyrillic characters (О, И), likely from Russian piracy sites in the Common Crawl.",
+        text: "Click here to download the full version",
+        lockedTokenIdx: 6, 
+        hoveredSourceTokenIdx: 3, 
+        predictedTokens: [
+          { token: " О", prob: "+5.26", type: "target" },
+          { token: " И", prob: "+4.96", type: "target" },
+          { token: "FREE", prob: "+3.5", type: "related" }
+        ]
+      }
     ]
   },
   {
+    layer: 0,
     headId: 5,
     headName: "Head 0:5",
     features: [
       {
-        name: "Proper Noun (Last Names)",
-        description: "First name prefixes predict completions - 'McC' → Cain, arthy; 'Sh' → ansen",
-        text: "The next person to speak was Senator McC ain",
-        lockedTokenIdx: 7,
-        hoveredSourceTokenIdx: 6
-      },
-      // {
-      //   name: "Verb Prefix Completion",
-      //   description: "Common verb prefixes completed - 'dis' → cuss, cover; 'con' → sider, firm",
-      //   text: "We must dis cuss this matter urgently",
-      //   lockedTokenIdx: 2,
-      //   hoveredSourceTokenIdx: 1
-      // },
-      // {
-      //   name: "Patent/Technical Language",
-      //   description: "'embodiment' context predicts past participles: configured, implemented, generated",
-      //   text: "In another embodiment the device may be configured",
-      //   lockedTokenIdx: 7,
-      //   hoveredSourceTokenIdx: 6
-      // },
-      // {
-      //   name: "Place/Brand Completion",
-      //   description: "Geographic prefixes completed - 'Mont' → real, ana; 'Mal' → dives, aysia",
-      //   text: "I am planning a trip to Mont real",
-      //   lockedTokenIdx: 6,
-      //   hoveredSourceTokenIdx: 5
-      // },
-      // {
-      //   name: "Adjective/Noun Prefix",
-      //   description: "General prefix completion - 'En' → chanting, gaging; 'fl' → ower, oating",
-      //   text: "It cast an En chanting spell on",
-      //   lockedTokenIdx: 3,
-      //   hoveredSourceTokenIdx: 2
-      // }
+        name: "Location Association (San)",
+        description: "Links 'San' to 'Calif/Francisco'",
+        patternExplanation: "Standard skip-trigram. 'San' sets up a context that persists across the intervening location name to predict the state abbreviation.",
+        text: "We visited San Luis Obispo, Calif",
+        lockedTokenIdx: 4, 
+        hoveredSourceTokenIdx: 2, 
+        predictedTokens: [
+          { token: "Calif", prob: "+1.62", type: "target" },
+          { token: "CA", prob: "+1.11", type: "target" },
+          { token: "Francisco", prob: "+0.5", type: "related" }
+        ]
+      }
     ]
   },
   {
+    layer: 0,
     headId: 6,
     headName: "Head 0:6",
     features: [
       {
-        name: "Parenthesis Stacking/Closing",
-        description: "Opening '(' massively predicts stacks of closing parentheses: ))))), )))',  ').)'",
-        text: "This is a very complex and deeply nested ( ( structure",
-        lockedTokenIdx: 8,
-        hoveredSourceTokenIdx: 7
-      },
-      // {
-      //   name: "Bracket Stacking/Closing",
-      //   description: "Opening '[' predicts stacks of closing brackets: ]], ]],  ')].'",
-      //   text: "The data is in a list [ 1 2 [ 3",
-      //   lockedTokenIdx: 8,
-      //   hoveredSourceTokenIdx: 7
-      // },
-      // {
-      //   name: "End of Block Newlines",
-      //   description: "Closing ')' or ']' predicts newlines to start new paragraphs",
-      //   text: "He bought all the items on the list ) and",
-      //   lockedTokenIdx: 8,
-      //   hoveredSourceTokenIdx: 7
-      // },
-      // {
-      //   name: "Code Block (Braces)",
-      //   description: "Opening '{' predicts closing braces for JSON/code: )}}, )}),  )},",
-      //   text: "The JSON object starts with data = { items",
-      //   lockedTokenIdx: 7,
-      //   hoveredSourceTokenIdx: 6
-      // },
-      // {
-      //   name: "Code Logic (if/for)",
-      //   description: "Code keywords predict syntax completions - 'for' → ]:, enumerate; 'if' → else, not",
-      //   text: "The code loops for each item in the list",
-      //   lockedTokenIdx: 3,
-      //   hoveredSourceTokenIdx: 2
-      // }
+        name: "Parenthesis Balancing",
+        description: "Deeply nested closure prediction",
+        patternExplanation: "This head tracks the depth of parentheses. Seeing an open paren `(` triggers a strong expectation of a closing paren `))` or `).` later.",
+        text: "The function call (which was nested (deeply",
+        lockedTokenIdx: 6, 
+        hoveredSourceTokenIdx: 3, 
+        predictedTokens: [
+          { token: "))", prob: "+8.62", type: "target" },
+          { token: ").", prob: "+7.30", type: "target" },
+          { token: " in", prob: "-1.0", type: "distractor" }
+        ]
+      }
     ]
   },
   {
+    layer: 1,
     headId: 7,
-    headName: "Head 0:7",
+    headName: "Head 1:7",
     features: [
       {
-        name: "Geographical Entity Association",
-        description: "Cardinal directions (East, West, North) boost place fragments: 'hire' (Yorkshire), 'wikipedia'",
-        text: "He was traveling from the North to visit",
-        lockedTokenIdx: 5,
-        hoveredSourceTokenIdx: 4
-      },
-      // {
-      //   name: "American [Organization]",
-      //   description: "'American' strongly predicts organization names: Association, Society",
-      //   text: "She is a member of the American Psychological Association",
-      //   lockedTokenIdx: 6,
-      //   hoveredSourceTokenIdx: 5
-      // },
-      // {
-      //   name: "Phrase: 'has [abstract noun]'",
-      //   description: "'has' completes with abstract nouns: origins, roots, implications, drawbacks",
-      //   text: "This decision has serious implications for the future",
-      //   lockedTokenIdx: 2,
-      //   hoveredSourceTokenIdx: 1
-      // },
-      // {
-      //   name: "Phrase: 'be [state/location]'",
-      //   description: "'be' predicts states of being: forefront, insofar",
-      //   text: "Our company must be at the forefront of",
-      //   lockedTokenIdx: 3,
-      //   hoveredSourceTokenIdx: 2
-      // },
-      // {
-      //   name: "Time Collocation",
-      //   description: "'time' boosts associated concepts: effort, patience, sleep",
-      //   text: "This project will require a great deal of time and",
-      //   lockedTokenIdx: 9,
-      //   hoveredSourceTokenIdx: 8
-      // }
+        name: "Abstract State (Has...)",
+        description: "Linking verbs predict abstract outcomes",
+        patternExplanation: "The verb 'has' acts as a pivot. The model looks back at 'has' when predicting abstract nouns like 'stood' or 'implications'.",
+        text: "This ancient embodiment has for many years",
+        lockedTokenIdx: 6, 
+        hoveredSourceTokenIdx: 3, 
+        predictedTokens: [
+          { token: "stood", prob: "+1.79", type: "target" },
+          { token: "been", prob: "+1.2", type: "related" },
+          { token: "gone", prob: "+0.8", type: "distractor" }
+        ]
+      }
     ]
   }
 ];
 
 // Flatten all features with their head info
-const ALL_FEATURES: (Feature & { headId: number; headName: string })[] = HEAD_FEATURES.flatMap(head =>
+const ALL_FEATURES: (Feature & { layer: number; headId: number; headName: string })[] = HEAD_FEATURES.flatMap(head =>
   head.features.map(feature => ({
     ...feature,
+    layer: head.layer,
     headId: head.headId,
     headName: head.headName,
   }))
@@ -378,26 +569,36 @@ export function AttentionCircuitWidget({
   panels = ["qk", "ov"],
   initialText,
   initialTab = 0,
+  initialLayer = null,
+  initialHead = null,
+  staticAttentionData,
 }: {
   panels?: Panel[];
   initialText?: string;
   initialTab?: number;
+  initialLayer?: number | null;
+  initialHead?: number | null;
+  staticAttentionData?: StaticAttentionData | null;
 } = {}) {
-  const [selectedFeatureIdx, setSelectedFeatureIdx] = useState(initialTab);
-  const currentFeature = ALL_FEATURES[selectedFeatureIdx];
-  const selectedHead = currentFeature.headId;
+  // Ensure we have a valid feature index
+  const safeInitialTab = Math.min(initialTab || 0, Math.max(0, ALL_FEATURES.length - 1));
+  const [selectedFeatureIdx, setSelectedFeatureIdx] = useState(safeInitialTab);
+  const selectedFeature = ALL_FEATURES[selectedFeatureIdx] || (ALL_FEATURES.length > 0 ? ALL_FEATURES[0] : null);
+  const selectedLayer = initialLayer !== null ? initialLayer : (selectedFeature ? selectedFeature.layer : 0);
+  const selectedHead = initialHead !== null ? initialHead : (selectedFeature ? selectedFeature.headId : 0);
 
+  const defaultFeature = ALL_FEATURES[safeInitialTab] || (ALL_FEATURES.length > 0 ? ALL_FEATURES[0] : null);
   const [text, setText] = useState(
-    initialText || ALL_FEATURES[initialTab].text
+    initialText || (defaultFeature ? defaultFeature.text : "")
   );
   const [hoveredToken, setHoveredToken] = useState<number | null>(
-    ALL_FEATURES[initialTab].lockedTokenIdx
+    defaultFeature ? defaultFeature.lockedTokenIdx : null
   );
   const [lockedToken, setLockedToken] = useState<number | null>(
-    ALL_FEATURES[initialTab].lockedTokenIdx
+    defaultFeature ? defaultFeature.lockedTokenIdx : null
   );
   const [hoveredSourceToken, setHoveredSourceToken] = useState<number | null>(
-    ALL_FEATURES[initialTab].hoveredSourceTokenIdx
+    defaultFeature ? defaultFeature.hoveredSourceTokenIdx : null
   );
   const [showTextInput, setShowTextInput] = useState(false);
 
@@ -410,41 +611,42 @@ export function AttentionCircuitWidget({
   const [realAttention, setRealAttention] = useState<number[][][][] | null>(null);
   const [realOVPredictions, setRealOVPredictions] = useState<any[] | null>(null);
 
-  // Fetch real attention patterns from API
+  // Load from static data, slicing to the selected layer/head
   useEffect(() => {
-    const fetchAttention = async () => {
-      if (!text.trim()) return;
+    if (!staticAttentionData) return;
 
-      try {
-        const response = await fetch(`${API_URL}/api/attention-patterns`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            text: text,
-            model_name: "t1",
-            layers: [0],
-            heads: [selectedHead],  // Request only the currently selected head
-            compute_ov: needsOVData,
-          }),
-        });
+    setRealTokens(staticAttentionData.tokens);
 
-        if (!response.ok) throw new Error("Failed to fetch attention");
+    if (needsQKData && staticAttentionData.attention) {
+      // Slice attention to just the selected layer and head
+      // Original shape: [position][layer][head][src_position]
+      // We need to produce: [position][0][0][src_position] (single layer, single head)
+      const sliced = staticAttentionData.attention.map(posData => {
+        const layerData = posData[selectedLayer];
+        if (!layerData) return [[Array(posData[0]?.[0]?.length || 0).fill(0)]];
+        const headData = layerData[selectedHead];
+        if (!headData) return [[Array(layerData[0]?.length || 0).fill(0)]];
+        return [[headData]];
+      });
+      setRealAttention(sliced);
+    } else {
+      setRealAttention(null);
+    }
 
-        const data: AttentionPatternsResponse = await response.json();
-        setRealTokens(data.tokens);
-        setRealAttention(needsQKData ? data.attention : null);
-        setRealOVPredictions(needsOVData ? (data.ov_predictions || null) : null);
-      } catch (err) {
-        console.error("Error fetching attention:", err);
-        setRealTokens(null);
-        setRealAttention(null);
-        setRealOVPredictions(null);
-      }
-    };
-
-    const timer = setTimeout(fetchAttention, 300);
-    return () => clearTimeout(timer);
-  }, [text, selectedHead, needsQKData, needsOVData]);
+    if (needsOVData && staticAttentionData.ov_predictions) {
+      // Slice OV predictions to selected layer/head
+      // Original shape: [token][layer][head][prediction]
+      const sliced = staticAttentionData.ov_predictions.map(tokenData => {
+        const layerData = tokenData?.[selectedLayer];
+        if (!layerData) return [[null]];
+        const headData = layerData[selectedHead];
+        return [[headData]];
+      });
+      setRealOVPredictions(sliced);
+    } else {
+      setRealOVPredictions(null);
+    }
+  }, [staticAttentionData, selectedLayer, selectedHead, needsQKData, needsOVData]);
 
   // Use real tokens if available, otherwise split text
   const tokens = realTokens ? realTokens.map(t => t.text) : text.split(/\s+/).filter(t => t.length > 0);
@@ -524,15 +726,18 @@ export function AttentionCircuitWidget({
   const handleFeatureChange = (featureIdx: number) => {
     setSelectedFeatureIdx(featureIdx);
     const feature = ALL_FEATURES[featureIdx];
-    setText(feature.text);
-    setLockedToken(feature.lockedTokenIdx);
-    setHoveredToken(feature.lockedTokenIdx);
-    setHoveredSourceToken(feature.hoveredSourceTokenIdx);
+    if (feature) {
+      // When selection changes from the grid, reset the "Lab" to the perfect example
+      setText(feature.text);
+      setLockedToken(feature.lockedTokenIdx);
+      setHoveredToken(feature.lockedTokenIdx);
+      setHoveredSourceToken(feature.hoveredSourceTokenIdx);
+    }
   };
 
   // Handle head click in diagram - select first feature of that head
-  const handleHeadClick = (headId: number) => {
-    const firstFeatureOfHead = ALL_FEATURES.findIndex(f => f.headId === headId);
+  const handleHeadClick = (layer: number, headId: number) => {
+    const firstFeatureOfHead = ALL_FEATURES.findIndex(f => f.layer === layer && f.headId === headId);
     if (firstFeatureOfHead !== -1) {
       handleFeatureChange(firstFeatureOfHead);
     }
@@ -586,257 +791,137 @@ export function AttentionCircuitWidget({
   };
 
   return (
-    <div className="my-12 -mx-[25%] p-8 bg-gray-50 rounded-lg border border-gray-200">
-      {/* Head diagram and feature list - only show if no initialText provided */}
+    <div className="my-12 -mx-[40%] lg:-mx-[15%] p-8 bg-gray-50/50 rounded-xl border border-gray-200">
+      
+      {/* 1. HEAD SELECTOR DIAGRAM */}
       {!initialText && (
-        <div className="mb-6 grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Left: Flattened feature list with head tags */}
-          <div className="bg-white rounded-lg border border-gray-200 p-4">
-            <h4 className="text-sm font-semibold text-gray-700 mb-3">
-              Attention Head Features:
-            </h4>
-            <div className="space-y-2 max-h-[400px] overflow-y-auto">
-              {ALL_FEATURES.map((feature, idx) => {
-                const headColor = HEAD_COLORS[feature.headId];
-                return (
-                  <button
-                    key={idx}
-                    onClick={() => handleFeatureChange(idx)}
-                    className={`w-full text-left px-3 py-2 rounded text-sm transition-colors ${
-                      selectedFeatureIdx === idx
-                        ? "bg-blue-50 border-l-4 border-blue-500"
-                        : "hover:bg-gray-50 border-l-4 border-transparent"
-                    }`}
-                  >
-                    <div className="flex items-center gap-2 mb-1">
-                      <div className="font-medium text-gray-900">{feature.name}</div>
-                      <span
-                        className="text-[10px] px-2 py-0.5 rounded-full font-medium"
-                        style={{
-                          backgroundColor: headColor.bg,
-                          color: headColor.text,
-                          border: `1px solid ${headColor.border}`,
-                        }}
-                      >
-                        Head {feature.headId}
-                      </span>
-                    </div>
-                    <div className="text-xs text-gray-600">{feature.description}</div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Right: Head selector diagram */}
-          <div className="bg-white rounded-lg border border-gray-200 p-4 flex flex-col items-center justify-center">
-            <svg viewBox="0 0 450 200" className="w-full">
-              {/* Embedding matrix at top */}
-              <rect x="150" y="10" width="150" height="25" rx="4" fill="#e5e5e5" stroke="#737373" strokeWidth="2" />
-              <text x="225" y="28" textAnchor="middle" fontSize="12" fontWeight="600" fill="#262626" fontFamily="system-ui">
-                Embed
-              </text>
-
-              {/* Flow down to attention layer */}
-              <line x1="225" y1="35" x2="225" y2="55" stroke="#a3a3a3" strokeWidth="2" />
-
-              {/* Attention heads in horizontal row */}
-              {HEAD_FEATURES.map((head, idx) => {
-                const isSelected = selectedHead === head.headId;
-                const headColor = HEAD_COLORS[head.headId];
-                const x = 30 + idx * 52;
-                const y = 55;
-
-                return (
-                  <g key={head.headId}>
-                    {/* Head box */}
-                    <rect
-                      x={x}
-                      y={y}
-                      width="42"
-                      height="35"
-                      rx="4"
-                      fill={isSelected ? headColor.bg : "#f5f5f5"}
-                      stroke={isSelected ? headColor.border : "#a3a3a3"}
-                      strokeWidth={isSelected ? "2" : "1.5"}
-                      className="cursor-pointer transition-all"
-                      onClick={() => handleHeadClick(head.headId)}
-                      style={{ cursor: 'pointer' }}
-                    />
-                    <text
-                      x={x + 21}
-                      y={y + 22}
-                      textAnchor="middle"
-                      fontSize="11"
-                      fill={isSelected ? headColor.text : "#525252"}
-                      fontFamily="system-ui"
-                      fontWeight={isSelected ? "600" : "400"}
-                      className="pointer-events-none"
-                    >
-                      H{head.headId}
-                    </text>
-                  </g>
-                );
-              })}
-
-              {/* Flow down from attention layer */}
-              <line x1="225" y1="90" x2="225" y2="110" stroke="#a3a3a3" strokeWidth="2" />
-
-              {/* Unembedding matrix at bottom */}
-              <rect x="150" y="110" width="150" height="25" rx="4" fill="#e5e5e5" stroke="#737373" strokeWidth="2" />
-              <text x="225" y="128" textAnchor="middle" fontSize="12" fontWeight="600" fill="#262626" fontFamily="system-ui">
-                Unembed
-              </text>
-
-              {/* Output arrow */}
-              <defs>
-                <marker id="stream-arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
-                  <polygon points="0 0, 10 3, 0 6" fill="#a3a3a3" />
-                </marker>
-              </defs>
-              <line x1="225" y1="135" x2="225" y2="155" stroke="#a3a3a3" strokeWidth="2" markerEnd="url(#stream-arrow)" />
-            </svg>
-          </div>
+        <div className="mb-8">
+          {/* <div className="mb-4">
+            <h3 className="text-lg font-bold text-gray-900 mb-2">Attention Head Architecture</h3>
+            <p className="text-sm text-gray-600">
+              Each attention head processes information independently. Click a head to see all its features.
+            </p>
+          </div> */}
+          <HeadSelectorDiagram 
+            selectedLayer={selectedLayer}
+            selectedHead={selectedHead}
+            onHeadClick={handleHeadClick}
+          />
         </div>
       )}
 
-      {/* Text input - toggle */}
-      {showTextInput && (
-        <div className="mb-8 max-w-2xl mx-auto">
-          <label className="block text-sm font-medium text-gray-700 mb-2 text-center">
-            Enter text to analyze attention patterns:
-          </label>
-          <div className="relative flex items-center">
-            <div className="absolute left-3 z-10 group">
-              <span className="text-gray-400 text-sm font-mono select-none cursor-help">
-                &lt;|BOS|&gt;
-              </span>
-              <div className="invisible group-hover:visible absolute left-0 top-full mt-1 w-64 p-2 bg-gray-900 text-white text-xs rounded shadow-lg z-20">
-                Beginning of Sequence token - a special token that marks the start of input to the model
-              </div>
-            </div>
-            <input
-              type="text"
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              className="w-full pl-24 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Type some text..."
-            />
-          </div>
+      {/* 2. SUPERPOSITION GRID */}
+      {!initialText && (
+        <div className="mb-8">
+          {/* <div className="mb-4">
+            <h3 className="text-lg font-bold text-gray-900 mb-2">Evidence of Superposition</h3>
+            <p className="text-sm text-gray-600">
+              Transformer attention heads are <strong>polysemantic</strong>. Because the model has limited capacity, it forces unrelated behaviors to share the same machinery. Below is a map of distinct "skip-trigram" features we've isolated across different heads.
+              <br/><span className="text-blue-600 font-medium">Click a cell to analyze how that specific circuit works.</span>
+            </p>
+          </div> */}
+          <SuperpositionGrid 
+            features={ALL_FEATURES} 
+            selectedIndex={selectedFeatureIdx} 
+            onSelect={handleFeatureChange} 
+          />
         </div>
       )}
 
-      {/* OV-only mode: horizontal layout with token strip on left */}
-      {needsOVData && !needsQKData ? (
-        <>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start mb-2">
-            {/* Left: Token Strip */}
-            <div className="bg-white p-4 rounded-lg border border-gray-200">
+      <div className="h-px bg-gray-200 w-full my-8" />
+
+      {/* 2. TRIGRAM EXPLAINER (The Lesson) */}
+      {!initialText && selectedFeature && (
+        <div className="animate-fadeIn">
+          <TrigramExplainer feature={selectedFeature} />
+        </div>
+      )}
+
+      {/* 3. INTERACTIVE LAB (The Exploration) */}
+      <div className="mt-8">
+         <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+
+            </div>
+            
+         </div>
+
+         {/* Token Strip & Circuits */}
+         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-1 overflow-hidden">
+           <div className="p-4 border-b border-gray-100 bg-gray-50/30">
               <TokenStrip
                 tokens={tokenStripData}
-                active={hoveredToken}
+                active={lockedToken !== null ? lockedToken : hoveredToken}
                 onHover={handleTokenHover}
-                locked={null}
+                onClick={handleTokenClick}
+                locked={lockedToken}
                 attentionData={attentionData}
                 valueWeightedData={attentionData}
                 headDeltasData={null}
                 selectedModel="t1"
-                selectedLayer={0}
-                selectedHead={0}
+                selectedLayer={selectedLayer}
+                selectedHead={selectedHead}
                 highlightMode="attention"
                 disableFirstToken={false}
               />
-              <p className="text-xs text-gray-500 mt-2">
-                Hover over any token to see OV contributions
-              </p>
-            </div>
+              <div className="flex justify-between items-center mt-3">
+                 <p className="text-xs text-gray-400">
+                    <span className="font-semibold">Tip:</span> Click a token to lock the query (Attention), then hover previous tokens (Source).
+                 </p>
+                 {/* Legend for the matrix below */}
+                 <div className="flex items-center gap-4 text-[10px] text-gray-500 uppercase tracking-wider font-semibold">
+                    <div className="flex items-center gap-1">
+                      <div className="w-3 h-3 bg-blue-600 rounded-sm opacity-20"></div>
+                      <span>Low Attn</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <div className="w-3 h-3 bg-blue-600 rounded-sm"></div>
+                      <span>High Attn</span>
+                    </div>
+                 </div>
+              </div>
+           </div>
 
-            {/* Right: OV Circuit */}
-            <OVCircuitWidget
-              tokens={tokens}
-              ovLogits={ovLogits}
-              hoveredSourceToken={hoveredSourceToken}
-              hoveredToken={hoveredToken}
-              lockedToken={lockedToken}
-            />
-          </div>
+           <div className={`grid gap-0 ${
+             needsQKData && needsOVData ? 'grid-cols-1 lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-gray-100' : 'grid-cols-1'
+           }`}>
+             {/* QK Circuit */}
+             {needsQKData && (
+               <div className="p-6">
+                 <div className="mb-4 flex items-center justify-between">
+                   <h4 className="font-bold text-gray-800 text-sm">Query-Key Circuit</h4>
+                   <span className="text-[10px] bg-gray-100 text-gray-500 px-2 py-1 rounded-full">Where the model looks</span>
+                 </div>
+                 <QKCircuitWidget
+                   tokens={tokens}
+                   affinityMatrix={affinityMatrix}
+                   hoveredToken={hoveredToken}
+                   hoveredSourceToken={hoveredSourceToken}
+                   onMatrixCellHover={handleMatrixCellHover}
+                   onMatrixCellLeave={handleMatrixCellLeave}
+                 />
+               </div>
+             )}
 
-          {/* Toggle button */}
-          <div className="mb-8 text-center">
-            <button
-              onClick={() => setShowTextInput(!showTextInput)}
-              className="text-xs text-neutral-500 hover:text-neutral-700 underline focus:outline-none"
-            >
-              {showTextInput ? "hide input" : "use your own text"}
-            </button>
-          </div>
-        </>
-      ) : (
-        <>
-          {/* Standard layout: Token Strip at top */}
-          <div className="mb-2 bg-white p-4 rounded-lg border border-gray-200">
-            <TokenStrip
-              tokens={tokenStripData}
-              active={lockedToken !== null ? lockedToken : hoveredToken}
-              onHover={handleTokenHover}
-              onClick={handleTokenClick}
-              locked={lockedToken}
-              attentionData={attentionData}
-              valueWeightedData={attentionData}
-              headDeltasData={null}
-              selectedModel="t1"
-              selectedLayer={0}
-              selectedHead={0}
-              highlightMode="attention"
-              disableFirstToken={false}
-            />
-            <p className="text-xs text-gray-500 mt-2">
-              {needsQKData && needsOVData
-                ? "Click a token to lock, then hover previous tokens to see OV contributions"
-                : needsOVData
-                ? "Click a token to lock, then hover previous tokens to see OV contributions"
-                : "Click a token to lock and see its attention pattern"}
-            </p>
-          </div>
-
-          {/* Toggle button */}
-          <div className="mb-8 text-center">
-            <button
-              onClick={() => setShowTextInput(!showTextInput)}
-              className="text-xs text-neutral-500 hover:text-neutral-700 underline focus:outline-none"
-            >
-              {showTextInput ? "hide input" : "use your own text"}
-            </button>
-          </div>
-
-          <div className={`grid gap-8 items-start ${
-            needsQKData && needsOVData ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1'
-          }`}>
-            {/* QK Circuit (Affinity Matrix) */}
-            {needsQKData && (
-              <QKCircuitWidget
-                tokens={tokens}
-                affinityMatrix={affinityMatrix}
-                hoveredToken={hoveredToken}
-                hoveredSourceToken={hoveredSourceToken}
-                onMatrixCellHover={handleMatrixCellHover}
-                onMatrixCellLeave={handleMatrixCellLeave}
-              />
-            )}
-
-            {/* OV Circuit */}
-            {needsOVData && (
-              <OVCircuitWidget
-                tokens={tokens}
-                ovLogits={ovLogits}
-                hoveredSourceToken={hoveredSourceToken}
-                hoveredToken={hoveredToken}
-                lockedToken={lockedToken}
-              />
-            )}
-          </div>
-        </>
-      )}
+             {/* OV Circuit */}
+             {needsOVData && (
+               <div className="p-6">
+                 <div className="mb-4 flex items-center justify-between">
+                   <h4 className="font-bold text-gray-800 text-sm">Output-Value Circuit</h4>
+                    <span className="text-[10px] bg-gray-100 text-gray-500 px-2 py-1 rounded-full">What the model writes</span>
+                 </div>
+                 <OVCircuitWidget
+                   tokens={tokens}
+                   ovLogits={ovLogits}
+                   hoveredSourceToken={hoveredSourceToken}
+                   hoveredToken={hoveredToken}
+                   lockedToken={lockedToken}
+                 />
+               </div>
+             )}
+           </div>
+         </div>
+      </div>
     </div>
   );
 }

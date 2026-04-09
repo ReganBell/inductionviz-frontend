@@ -1,18 +1,12 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { CombinedAttentionWidget } from "../components/CombinedAttentionWidget";
 import { CompletionPreviewWidget } from "../components/CompletionPreviewWidget";
-import { TokenStrip } from "../components/TokenStrip";
 import { AttentionCircuitWidget } from "../components/AttentionCircuitWidget";
 import { CompetingPatternsDemo } from "../components/CompetingPatternsDemo";
 import { CopyingBehaviorDemo } from "../components/CopyingBehaviorDemo";
-import { PreviousTokenHeadDemo } from "../components/PreviousTokenHeadDemo";
-import { InductionHeadDemo } from "../components/InductionHeadDemo";
 import { InductionComparisonWidget } from "../components/InductionComparisonWidget";
-import { EvolutionWidget } from "../components/EvolutionWidget";
-import { TokenEmbeddingDiagram } from "../components/TokenEmbeddingDiagram";
-import { GradientForceWidget } from "../components/GradientForceWidget";
-import { API_URL } from "../config";
-import type { AttentionPatternsResponse, TokenInfo } from "../types";
+import { CompositionFlowDiagram } from "../components/CompositionFlowDiagram";
+import { staticData, type StaticAttentionData, type StaticBigramData, type StaticCompletionsData } from "../staticData";
 import NoLayerFigure2 from "./NoLayerFigure2";
 
 const sections = [
@@ -29,11 +23,6 @@ const sections = [
   { id: "copying-demo", title: "Copying Behavior", level: 1 },
   { id: "two-layers-induction-heads", title: "Two Layers: Induction Heads", level: 0 },
   { id: "induction-comparison", title: "Induction Comparison", level: 1 },
-  { id: "prev-token-demo", title: "Previous Token Head", level: 1 },
-  { id: "induction-demo", title: "Induction Head Demo", level: 1 },
-  { id: "evolution", title: "How These Circuits Evolve During Training", level: 0 },
-  { id: "evolution-widget", title: "Evolution Widget", level: 1 },
-  { id: "gradient-force", title: "Gradient Force", level: 1 },
 ];
 
 const PREVIOUS_TOKEN_TAGS = [
@@ -85,6 +74,28 @@ export function Explainer() {
   const [activeSection, setActiveSection] = useState("introduction");
   const [tocVisible, setTocVisible] = useState(false);
   const [footnoteVisible, setFootnoteVisible] = useState(false);
+
+  // Static data state
+  const [quarterbackBigram, setQuarterbackBigram] = useState<StaticBigramData | null>(null);
+  const [quarterbackAttnT1, setQuarterbackAttnT1] = useState<StaticAttentionData | null>(null);
+  const [quarterbackCompletions, setQuarterbackCompletions] = useState<StaticCompletionsData | null>(null);
+  const [hpAttnT1, setHpAttnT1] = useState<StaticAttentionData | null>(null);
+  const [michaelAttnT1OV, setMichaelAttnT1OV] = useState<StaticAttentionData | null>(null);
+  const [reganAttnT1, setReganAttnT1] = useState<StaticAttentionData | null>(null);
+  const [reganAttnT2, setReganAttnT2] = useState<StaticAttentionData | null>(null);
+  const [reganSpaceAttnT2, setReganSpaceAttnT2] = useState<StaticAttentionData | null>(null);
+
+  // Load all static data on mount
+  useEffect(() => {
+    staticData.quarterbackBigram().then(setQuarterbackBigram);
+    staticData.quarterbackAttnT1().then(setQuarterbackAttnT1);
+    staticData.quarterbackCompletions().then(setQuarterbackCompletions);
+    staticData.hpAttnT1().then(setHpAttnT1);
+    staticData.michaelAttnT1OV().then(setMichaelAttnT1OV);
+    staticData.reganAttnT1().then(setReganAttnT1);
+    staticData.reganAttnT2().then(setReganAttnT2);
+    staticData.reganSpaceAttnT2().then(setReganSpaceAttnT2);
+  }, []);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -192,6 +203,7 @@ export function Explainer() {
         <div id="bigram-widget" className="my-12">
           <CombinedAttentionWidget
             panels={["bigram"]}
+            staticBigramData={quarterbackBigram}
           />
           {/* Maybe a caption here: we are limited to a single token of context. The sentence at large is about football, but we can only predict football related tokens  */}
         </div>
@@ -218,13 +230,20 @@ export function Explainer() {
           </p>
 
           <div id="skip-trigram">
-            <CombinedAttentionWidget panels={["l1", "bigram"]} />
+            <CombinedAttentionWidget
+              panels={["l1", "bigram"]}
+              staticBigramData={quarterbackBigram}
+              staticAttentionData={quarterbackAttnT1}
+            />
           </div>
 
 
         {/* Completion Preview Widget - NEW */}
         <div id="completion-preview" className="my-12">
-          <CompletionPreviewWidget />
+          <CompletionPreviewWidget
+            staticBigramData={quarterbackBigram}
+            staticCompletionsData={quarterbackCompletions}
+          />
         </div>
 
 
@@ -252,7 +271,7 @@ export function Explainer() {
             <AttentionCircuitWidget
               panels={["qk"]}
               initialText="Mr and Mrs Dursley, of number four, Privet Drive, were proud to say that they were perfectly normal, thank you very much. They were the last people you'd expect to be involved in anything strange or mysterious, because they just didn't hold with such nonsense. Mr Dursley was the director of a firm called Grunnings, which made drills. He was a big, beefy man with hardly any neck, although he did have a very large moustache."
-              // initialLockedToken={68}
+              staticAttentionData={hpAttnT1}
             />
           </div>
 
@@ -283,6 +302,7 @@ export function Explainer() {
               initialText="The email was from Michael our new director"
               initialTab={2}
               initialHead={2}
+              staticAttentionData={michaelAttnT1OV}
             />
           </div>
 
@@ -329,9 +349,7 @@ end`}
             Our toy model has eight attention heads, but encodes many more features than that.
           </p>
 
-          <div id="attention-explorer">
-            <AttentionCircuitWidget />
-          </div>
+          {/* Attention explorer sandbox removed - requires live backend */}
         </section>
 
         {/* TODO: You should be able to insert any text here and we will highlight in green if the OV circuit for that token is copying */}
@@ -355,7 +373,10 @@ end`}
           </p>
           {/* TODO: add a bigram panel to this as well */}
           <div id="induction-comparison">
-            <InductionComparisonWidget />
+            <InductionComparisonWidget
+              staticT1Data={reganAttnT1}
+              staticT2Data={reganAttnT2}
+            />
           </div>
 
           <p className="text-lg leading-relaxed mt-6">
@@ -377,10 +398,11 @@ end`}
           </p>
 
           <div id="attention-explorer">
-            <AttentionCircuitWidget 
+            <AttentionCircuitWidget
             initialText="My name is Regan. My name is "
             initialLayer={1}
             initialHead={7}
+            staticAttentionData={reganSpaceAttnT2}
             />
           </div>
 
@@ -455,46 +477,6 @@ end`}
             No, the reason is that the tag is written into an orthogonal subspace. Now that we have two layers, our output from the head doesn't map exactly to our guess about the next token anymore, it's more like an "under-construction" guess: we're allowed to just do partial computation that's served up for later layers in the network to finish up and create a next-token guess with.
           </p>
 
-        </section>
-
-        {/* Phase 7: Evolution (Placeholder) */}
-        <section id="evolution" className="prose prose-neutral max-w-none mt-12">
-          <h2 className="font-serif text-3xl mt-12 mb-6">How These Circuits Evolve During Training</h2>
-
-          <p className="text-lg leading-relaxed">
-            Initially, this struck me as a classic case of evolutionary exaptation: that's when, in biological evolution, a trait evolves for one purpose (like feathers for insulation) and is later co-opted for a completely different function (flight).
-          </p>
-
-          <p className="text-lg leading-relaxed mt-6">
-            My original hypothesis was that the "Previous Token Head" (upstream) would have to evolve first—perhaps to serve a simple utility like predicting double-characters (<code className="bg-neutral-100 px-1.5 py-0.5 rounded text-sm font-mono">!!</code> or <code className="bg-neutral-100 px-1.5 py-0.5 rounded text-sm font-mono">??</code>)—and only after it was established could the "Induction Head" (downstream) latch onto it to build a complex copy-paste circuit. In a biological system, you'd expect to see hysteresis: a lag where the upstream feature exists for a while before the downstream function emerges.
-          </p>
-
-          <p className="text-lg leading-relaxed mt-6">
-            It turns out, however, that things work differently when the system is differentiable end-to-end.
-          </p>
-
-          <p className="text-lg leading-relaxed mt-6">
-            In our training run, we observe lockstep co-evolution rather than sequential exaptation. As you can see in the Gradient Force Widget, the induction capability and the previous-token capability rise at the exact same moment (around step 200).
-          </p>
-
-          <div id="evolution-widget">
-            <EvolutionWidget />
-          </div>
-          <div id="gradient-force">
-            <GradientForceWidget />
-          </div>
-
-          <p className="text-lg leading-relaxed mt-6">
-            This happens because of backpropagation. Unlike biological natural selection, which is "blind" to future utility, a neural network's gradient signal is teleological—it allows future needs to reach back in time (or rather, back through the layers) to construct necessary components.
-          </p>
-
-          <p className="text-lg leading-relaxed mt-6">
-            When the model fails to predict a token like "Regan", the error generates a gradient that flows through the Induction Head (Layer 1) and hits the Source Head (Layer 0). It effectively tells the Layer 0 head: "I could have solved this if you had told me what the previous token was."
-          </p>
-
-          <p className="text-lg leading-relaxed mt-6">
-            This creates a massive, direct evolutionary pressure—let's call it "Gradient Bullying"—where the downstream induction head forces the upstream head to become a "Previous Token Head" specifically to serve the induction circuit. The upstream organ didn't evolve randomly; it was built to order.
-          </p>
         </section>
       </div>
     </article>

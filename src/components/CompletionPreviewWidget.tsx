@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { API_URL } from "../config";
 import type { BigramBatchResponse, BatchCompletionsResponse, CompletionInfo } from "../types";
+import type { StaticBigramData, StaticCompletionsData } from "../staticData";
 
 interface Prediction {
   token: string;
@@ -102,80 +102,29 @@ function CompletionDisplay({ title, completion, emptyMessage }: CompletionDispla
 
 export function CompletionPreviewWidget({
   initialText = "The quarterback threw the football 87 yards for a touchdown",
-  maxNewTokens = 20,
-  modelName = "bigram",
-  layer,
-  head,
+  staticBigramData,
+  staticCompletionsData,
 }: {
   initialText?: string;
-  maxNewTokens?: number;
-  modelName?: string;
-  layer?: number;
-  head?: number;
+  staticBigramData?: StaticBigramData | null;
+  staticCompletionsData?: StaticCompletionsData | null;
 }) {
-  const [text, setText] = useState(initialText);
   const [tokens, setTokens] = useState<string[]>([]);
   const [hoveredTokenIdx, setHoveredTokenIdx] = useState<number | null>(null);
-  const [showTextInput, setShowTextInput] = useState(false);
 
   // Batch results
   const [batchBigramResults, setBatchBigramResults] = useState<BigramBatchResponse | null>(null);
   const [batchCompletionResults, setBatchCompletionResults] = useState<BatchCompletionsResponse | null>(null);
 
-  // Fetch all data in bulk when text changes
   useEffect(() => {
-    const fetchData = async () => {
-      if (!text.trim()) {
-        setTokens([]);
-        setBatchBigramResults(null);
-        setBatchCompletionResults(null);
-        return;
-      }
-
-      try {
-        // Fetch batch bigram predictions (for next token only)
-        const bigramBatchResponse = await fetch(`${API_URL}/api/bigram-batch`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            text: text,
-            k: 10,
-          }),
-        });
-
-        if (bigramBatchResponse.ok) {
-          const bigramBatchData = await bigramBatchResponse.json();
-          setBatchBigramResults(bigramBatchData);
-          setTokens(bigramBatchData.tokens.map((t: any) => t.text));
-        }
-
-        // Fetch batch completions (multi-token sequences)
-        const completionsResponse = await fetch(`${API_URL}/api/batch-completions`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            text: text,
-            max_new_tokens: maxNewTokens,
-            stop_tokens: ['.', '!', '?'],
-            temperature: 1.0,
-            model_name: modelName,
-            layer: layer,
-            head: head,
-          }),
-        });
-
-        if (completionsResponse.ok) {
-          const completionsData = await completionsResponse.json();
-          setBatchCompletionResults(completionsData);
-        }
-      } catch (err) {
-        console.error("Error fetching data:", err);
-      }
-    };
-
-    const timer = setTimeout(fetchData, 300);
-    return () => clearTimeout(timer);
-  }, [text, maxNewTokens, modelName, layer, head]);
+    if (staticBigramData) {
+      setBatchBigramResults(staticBigramData);
+      setTokens(staticBigramData.tokens.map(t => t.text));
+    }
+    if (staticCompletionsData) {
+      setBatchCompletionResults(staticCompletionsData);
+    }
+  }, [staticBigramData, staticCompletionsData]);
 
   // Determine active token index: use hovered token if available, otherwise use last token
   const activeTokenIdx = hoveredTokenIdx !== null
@@ -198,39 +147,12 @@ export function CompletionPreviewWidget({
       <div className="mb-6 text-center">
         <h3 className="text-xl font-semibold text-gray-900">
           Completion Preview
-          {modelName !== "bigram" && (
-            <span className="text-base font-normal text-gray-600">
-              {" "}({modelName.toUpperCase()}{layer !== undefined ? ` L${layer}` : ""}{head !== undefined ? ` H${head}` : ""})
-            </span>
-          )}
         </h3>
         <p className="text-sm text-gray-600 mt-1">
-          Hover over a token to see what the {modelName === "bigram" ? "bigram model" : `${modelName.toUpperCase()} model`} would generate from that point
+          Hover over a token to see what the bigram model would generate from that point
         </p>
       </div>
 
-      {/* Text input - toggle */}
-      {showTextInput && (
-        <div className="mb-8 max-w-2xl mx-auto">
-          <div className="relative flex items-center">
-            <div className="absolute left-3 z-10 group">
-              <span className="text-gray-400 text-sm font-mono select-none cursor-help">
-                &lt;|BOS|&gt;
-              </span>
-              <div className="invisible group-hover:visible absolute left-0 top-full mt-1 w-64 p-2 bg-gray-900 text-white text-xs rounded shadow-lg z-20">
-                Beginning of Sequence token - a special token that marks the start of input to the model
-              </div>
-            </div>
-            <input
-              type="text"
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              className="w-full pl-24 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Type some text..."
-            />
-          </div>
-        </div>
-      )}
 
       {/* Token strip */}
       {tokens.length > 0 && (
@@ -266,15 +188,7 @@ export function CompletionPreviewWidget({
             </div>
           </div>
 
-          {/* Toggle button */}
-          <div className="mb-8 text-center">
-            <button
-              onClick={() => setShowTextInput(!showTextInput)}
-              className="text-xs text-neutral-500 hover:text-neutral-700 underline focus:outline-none"
-            >
-              {showTextInput ? "hide input" : "use your own text"}
-            </button>
-          </div>
+          <div className="mb-8" />
         </>
       )}
 
